@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Detergent Inventory">
+<title>Detergent Inventory</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --red:#8B1A1A;--red-dark:#6B1313;--bg:#F2F3F5;--white:#FFFFFF;
+  --border:#E0E0E0;--text:#1A1A1A;--text-sec:#5A6270;--text-hint:#9AA0AC;
+  --green:#27AE60;--amber:#E67E22;--blue:#2980B9;
+}
+html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);}
+.app{display:flex;flex-direction:column;height:100%;max-width:960px;margin:0 auto;background:var(--bg);}
+
+/* HEADER */
+.topbar{background:var(--red);padding:.75rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.topbar-brand{font-size:16px;font-weight:700;color:#fff;letter-spacing:.02em;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.topbar-date{font-size:12px;color:rgba(255,255,255,.8);font-weight:500;}
+.clear-btn{font-size:11px;font-weight:700;color:rgba(255,255,255,.7);background:rgba(255,255,255,.15);border:none;border-radius:6px;padding:4px 9px;cursor:pointer;letter-spacing:.04em;}
+.clear-btn:active{background:rgba(255,255,255,.25);}
+
+/* TAB NAV */
+.tab-nav{background:var(--white);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch;}
+.tab-nav::-webkit-scrollbar{display:none;}
+.tab-nav-item{padding:.75rem 1rem;font-size:13px;font-weight:600;color:var(--text-sec);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:color .15s,border-color .15s;display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.tab-nav-item.active{color:var(--red);border-bottom-color:var(--red);}
+
+/* SCROLLABLE BODY */
+.page-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem;display:flex;flex-direction:column;gap:.9rem;}
+.hidden{display:none!important;}
+
+/* METRIC CARDS */
+.metric-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem;}
+.metric-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:.85rem .9rem;}
+.metric-card-label{font-size:10px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
+.metric-card-val{font-size:22px;font-weight:700;color:var(--text);line-height:1;}
+.metric-card-sub{font-size:10px;color:var(--text-hint);margin-top:2px;}
+.c-red{color:var(--red)!important;}.c-green{color:var(--green)!important;}.c-amber{color:var(--amber)!important;}.c-blue{color:var(--blue)!important;}
+
+/* DATE SELECTOR */
+.date-row{display:flex;align-items:center;gap:8px;padding:.6rem .9rem;background:var(--white);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;color:var(--text-sec);}
+.date-row select{border:none;background:transparent;font-size:13px;font-weight:700;color:var(--red);cursor:pointer;outline:none;flex:1;}
+
+/* SECTION */
+.section-title{font-size:11px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.5rem;}
+
+/* DET CARDS */
+.det-grid{display:flex;flex-direction:column;gap:.55rem;}
+.det-card{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.det-card-hdr{display:flex;align-items:center;gap:9px;padding:.55rem .85rem;border-bottom:1px solid var(--border);}
+.det-swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+.det-card-name{font-size:13px;font-weight:700;color:var(--text);flex:1;}
+.det-card-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));}
+.det-card-stats2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--border);}
+.dcs{padding:.45rem .7rem;border-right:1px solid var(--border);}
+.dcs:last-child{border-right:none;}
+.dcs-label{font-size:9px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:1px;}
+.dcs-val{font-size:13px;font-weight:600;color:var(--text);}
+.mini-bar{height:3px;background:#EAECEF;border-radius:2px;overflow:hidden;margin-top:3px;position:relative;}
+.mini-bar.tk{height:5px;overflow:visible;}
+.min-tick{position:absolute;top:-2px;bottom:-2px;width:2px;background:#1A1A1A;border-radius:1px;}
+@keyframes fillPulse{0%,100%{box-shadow:inset 0 0 0 2px #922B21;}50%{box-shadow:inset 0 0 0 2px rgba(146,43,33,0.25);}}
+.dcs.fill-now{background:#FADBD8;animation:fillPulse 1.6s ease-in-out infinite;}
+.dcs.fill-soon{background:#FDEBD0;}
+.fill-flag{display:inline-block;font-size:8.5px;font-weight:800;letter-spacing:.05em;padding:1px 6px;border-radius:999px;margin-left:5px;vertical-align:1px;}
+.fill-flag.now{background:#922B21;color:#fff;}
+.fill-flag.soon{background:#E67E22;color:#fff;}
+.mini-bar-fill{height:100%;border-radius:2px;}
+.doh-chip{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;margin-left:auto;white-space:nowrap;}
+.doh-g{background:#D5F5E3;color:#1A6B3C;}.doh-m{background:#FDEBD0;color:#935116;}.doh-r{background:#FADBD8;color:#922B21;}
+
+/* CHART */
+.chart-card{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.chart-card-hdr{padding:.65rem .9rem;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--text);}
+.chart-body{padding:.75rem .9rem .4rem;}
+.chart-legend{display:flex;flex-wrap:wrap;gap:10px;padding:.4rem .9rem .65rem;border-top:1px solid var(--border);}
+.leg{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--text-sec);}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dash-note{font-size:11px;color:var(--text-hint);font-style:italic;padding:0 .1rem;}
+
+/* ENTRY SCREENS */
+.entry-topbar{background:var(--red);padding:.6rem 1.25rem;font-size:11px;font-weight:700;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.entry-date-bar{display:flex;align-items:center;gap:10px;padding:.75rem 1.25rem;background:var(--white);border-bottom:1px solid var(--border);flex-shrink:0;}
+.entry-date-bar label{font-size:11px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.05em;}
+.entry-date-bar input[type=date]{font-size:14px;font-weight:600;padding:5px 10px;border:1px solid var(--border);border-radius:7px;background:#F8F9FA;color:var(--text);flex:1;}
+.entry-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.entry-list{padding:.85rem 1rem;display:flex;flex-direction:column;gap:.55rem;}
+.entry-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:.7rem .9rem;display:grid;grid-template-columns:140px 155px 1fr;align-items:center;gap:10px;}
+.entry-card-oh{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:.7rem .9rem;display:grid;grid-template-columns:140px 155px 1fr;align-items:center;gap:10px;}
+.entry-det-badge{font-size:12px;font-weight:700;padding:6px 11px;border-radius:7px;display:inline-block;white-space:nowrap;text-align:center;}
+
+/* STEPPER */
+.stepper{display:flex;align-items:center;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;height:44px;background:#F8F9FA;}
+.step-btn{width:44px;height:44px;flex-shrink:0;border:none;background:transparent;color:var(--text);font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;font-weight:300;line-height:1;}
+.step-btn:active{background:#E0E0E0;}
+.step-div{width:1px;height:60%;background:var(--border);flex-shrink:0;}
+.step-input{flex:1;min-width:0;height:100%;border:none;background:transparent;color:var(--text);font-size:17px;font-weight:700;text-align:center;padding:0;-moz-appearance:textfield;}
+.step-input::-webkit-outer-spin-button,.step-input::-webkit-inner-spin-button{-webkit-appearance:none;}
+.step-input:focus{outline:none;background:#EFF6FF;}
+
+/* CONTAINER TOGGLE */
+.oh-right{display:flex;align-items:center;gap:7px;justify-content:flex-end;}
+.gal-tag{font-size:11px;font-weight:700;color:var(--text-sec);white-space:nowrap;background:#F2F3F5;border:1px solid var(--border);border-radius:6px;padding:3px 7px;flex-shrink:0;}
+
+/* SAVE BUTTON */
+.save-btn-wrap{padding:.5rem 1rem 1rem;flex-shrink:0;}
+.save-btn{display:block;width:100%;padding:.95rem;font-size:15px;font-weight:700;background:var(--red);color:#fff;border:none;border-radius:10px;cursor:pointer;letter-spacing:.02em;-webkit-tap-highlight-color:transparent;}
+.save-btn:active{background:var(--red-dark);}
+
+/* LOG */
+.log-page{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.log-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem;padding:.85rem 1rem 0;}
+.log-table-wrap{padding:.75rem 1rem 1rem;}
+.ltable{width:100%;border-collapse:collapse;font-size:12px;background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.ltable th{background:#F8F9FA;font-size:10px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.05em;padding:.55rem .75rem;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
+.ltable td{padding:.55rem .75rem;border-bottom:1px solid var(--border);color:var(--text);}
+.ltable tr:last-child td{border-bottom:none;}
+.area-pill{font-size:10px;font-weight:700;padding:2px 6px;border-radius:999px;white-space:nowrap;}
+.ap-tank{background:#D5F5E3;color:#1A6B3C;}.ap-hand{background:#D6EAF8;color:#1A5276;}.ap-del{background:#FDEBD0;color:#935116;}
+.log-det{display:inline-flex;align-items:center;gap:5px;}
+.log-swatch{width:8px;height:8px;border-radius:2px;flex-shrink:0;display:inline-block;}
+.empty-state{padding:2.5rem;text-align:center;color:var(--text-hint);font-size:13px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--red);color:#fff;padding:.65rem 1.4rem;border-radius:10px;font-size:13px;font-weight:700;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9999;white-space:nowrap;box-shadow:0 4px 16px rgba(139,26,26,.4);}
+.toast.show{opacity:1;}
+
+/* STORAGE INDICATOR */
+.storage-bar{background:rgba(255,255,255,.12);font-size:10px;font-weight:600;color:rgba(255,255,255,.7);padding:3px 1.25rem;letter-spacing:.04em;text-align:right;flex-shrink:0;}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/msal-browser/2.38.3/msal-browser.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<div class="topbar">
+  <span class="topbar-brand">&#9670; Detergent Inventory</span>
+  <div class="topbar-right">
+    <button class="clear-btn" id="cloud-btn" onclick="cloudButtonClick()">&#9729; SIGN IN</button>
+    <span class="topbar-date" id="top-date"></span>
+    <button class="clear-btn" onclick="exportCSV()">EXPORT CSV</button>
+    <button class="clear-btn" onclick="confirmClearData()">CLEAR DATA</button>
+  </div>
+</div>
+<div class="storage-bar" id="storage-bar"></div>
+
+<!-- TAB NAV -->
+<div class="tab-nav">
+  <div class="tab-nav-item active" onclick="switchTab('dashboard')">&#9632; Dashboard</div>
+  <div class="tab-nav-item" onclick="switchTab('tank')">&#9670; Pod Tank</div>
+  <div class="tab-nav-item" onclick="switchTab('onhand')">&#9723; Inventory</div>
+  <div class="tab-nav-item" onclick="switchTab('delivery')">&#9651; Delivered</div>
+  <div class="tab-nav-item" onclick="switchTab('cars')">&#128663; Cars</div>
+  <div class="tab-nav-item" onclick="switchTab('log')">&#9776; Log</div>
+</div>
+
+<!-- ═══ DASHBOARD ═══ -->
+<div id="tab-dashboard" class="page-body">
+  <div class="date-row">
+    &#128197; Viewing:&nbsp;
+    <select id="dash-date-pick" onchange="renderDash()"></select>
+  </div>
+  <div id="attention-wrap"></div>
+  <div>
+    <div class="section-title">Per-Detergent Breakdown</div>
+    <div class="det-grid" id="det-cards"></div>
+  </div>
+  <div>
+    <div class="section-title">Days of Supply on Hand</div>
+    <div class="chart-card">
+      <div class="chart-card-hdr" style="display:flex;justify-content:space-between;align-items:center">Days on Hand by Detergent <span style="font-size:10px;font-weight:600;color:var(--text-hint)">| reorder line = 20 days</span></div>
+      <div class="chart-body" id="doh-chart" style="padding:.8rem .9rem"></div>
+    </div>
+  </div>
+  <p class="dash-note" id="dash-note"></p>
+</div>
+
+<!-- ═══ POD TANK ═══ -->
+<div id="tab-tank" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+  <div class="entry-topbar">Pod Tank Gallons <span style="opacity:.65;font-weight:400;font-size:10px">&#8644; steps of 0.5</span></div>
+  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-tank"></div>
+  <div class="entry-scroll"><div class="entry-list" id="rows-tank"></div></div>
+  <div class="save-btn-wrap"><button class="save-btn" onclick="saveEntry('tank')">Save Pod Tank Entry</button></div>
+</div>
+
+<!-- ═══ ON HAND ═══ -->
+<div id="tab-onhand" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+  <div class="entry-topbar">Drums / Containers Inventory <span style="opacity:.65;font-weight:400;font-size:10px">whole numbers</span></div>
+  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-onhand"></div>
+  <div class="entry-scroll"><div class="entry-list" id="rows-onhand"></div></div>
+  <div class="save-btn-wrap"><button class="save-btn" onclick="saveEntry('onhand')">Save Inventory Entry</button></div>
+</div>
+
+<!-- ═══ DELIVERED ═══ -->
+<div id="tab-delivery" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+  <div class="entry-topbar">Drums / Containers Delivered <span style="opacity:.65;font-weight:400;font-size:10px">whole numbers</span></div>
+  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-delivery"></div>
+  <div class="entry-scroll"><div class="entry-list" id="rows-delivery"></div></div>
+  <div class="save-btn-wrap"><button class="save-btn" onclick="saveEntry('delivery')">Save Delivery Entry</button></div>
+</div>
+
+<!-- ═══ CARS WASHED ═══ -->
+<div id="tab-cars" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+  <div class="entry-topbar">Cars Washed by Package <span style="opacity:.65;font-weight:400;font-size:10px">Club + retail combined</span></div>
+  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-cars"></div>
+  <div class="entry-scroll">
+    <div style="padding:.85rem 1rem 0">
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:.7rem .9rem">
+        <div style="font-size:11px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Paste from Manager App</div>
+        <textarea id="cars-paste" rows="3" placeholder="Copy the Wash Details table from the Tommy's manager app and paste it here — counts fill in automatically." style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-size:12px;font-family:inherit;background:#F8F9FA;resize:vertical" oninput="parseCarsPaste()"></textarea>
+        <div id="cars-paste-status" style="font-size:11px;font-weight:600;margin-top:4px;color:var(--text-hint)"></div>
+      </div>
+    </div>
+    <div class="entry-list" id="rows-cars"></div>
+    <div style="padding:0 1rem 1rem"><div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:.7rem .9rem;font-size:12px;color:var(--text-sec)" id="cars-preview"></div></div>
+  </div>
+  <div class="save-btn-wrap"><button class="save-btn" onclick="saveEntry('cars')">Save Cars Washed</button></div>
+</div>
+
+<!-- ═══ LOG ═══ -->
+<div id="tab-log" class="hidden log-page">
+  <div class="log-summary" id="log-stats"></div>
+  <div style="padding:.65rem 1rem 0">
+    <button id="sync-hist-btn" onclick="syncHistory()" style="width:100%;padding:.7rem;font-size:13px;font-weight:700;background:#fff;color:#8B1A1A;border:1.5px solid #8B1A1A;border-radius:10px;cursor:pointer">&#9729; Sync History to Cloud (one-time)</button>
+  </div>
+  <div class="log-table-wrap">
+    <div class="section-title" style="margin-bottom:.5rem">Recent Entries</div>
+    <div id="log-body"></div>
+  </div>
+</div>
+
+</div><!-- /app -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════
+const STORAGE_KEY = 'detergent_inventory_v5';
+const GAL = { drum: 30, ez: 2.5 };
+// Default container type per detergent (from your spreadsheet conversions)
+const DET_CTYPE = ["drum", "ez", "drum", "drum", "ez", "ez", "ez", "drum", "ez", "ez"];
+// Pod tank minimum levels (gallons) — from your Input Log conditional formatting
+const MIN_LEVEL = [10.0, 5.0, 10.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0];
+
+// Wash packages (Club + retail combined) and mL-per-car rates per detergent,
+// derived from the Cars Washed sheet volumetrics (verified against Jul 10 2026 exactly).
+// Rates change when injectors/dials are recalibrated — update here (Settings tab later).
+const PACKAGES = ['Works','Ultimate','Super','Quality'];
+const ML_PER_GAL = 3785.411784;
+const CAR_RATES = [           //  Works, Ultimate, Super, Quality  (mL/car)
+  [39.6, 39.6, 30.4, 30.4],   // Presoak #1
+  [ 6.4,  6.4,  6.4,  6.4],   // Scent #2
+  [24.0, 18.8, 16.2, 16.2],   // Brite #3
+  [ 9.2,  9.2,  9.2,  9.2],   // Vacation #4
+  [ 4.5,  0.0,  0.0,  0.0],   // Ceramic Wax #5 (Works only)
+  [ 7.6,  7.6,  7.6,  0.0],   // Guard #6 (not on Quality)
+  [12.8, 12.8, 12.8, 12.8],   // Drying Agent #7
+  [22.5,  0.0,  0.0,  0.0],   // Tire Gloss #8 (Works only)
+  [ 0.0,  0.0,  0.0,  0.0],   // Cloth & Window #9 (not car-applied)
+  [ 0.0,  0.0,  0.0,  0.0],   // Wall & Equip #10 (not car-applied)
+];
+function calcFromCars(counts){   // counts = [works, ultimate, super, quality] -> gallons per detergent
+  return DETS.map((_,i)=>{
+    const ml = CAR_RATES[i].reduce((s,r,p)=>s+r*(counts[p]||0),0);
+    return Math.round(ml/ML_PER_GAL*1000)/1000;
+  });
+}
+
+// ═══════════════════════════════════════════════
+// CLOUD SYNC — Microsoft Graph -> DetergentEntries.xlsx (OneDrive)
+// ═══════════════════════════════════════════════
+const CLOUD = {
+  clientId: '3c322deb-b644-43e6-9278-dae3490fd30d',
+  tenantId: 'eb10c51a-be95-4d33-bf14-0d5518a9c28a',
+  driveId:  'b!IYABL42eKEaEIGmSiAsJpw6OeHHLY65BtdUIGxX3dPuLcYaqOjudTaq559cAlQal',
+  itemId:   '01MIHHRLKH77QZWVIBANEYACKIF27OIMKJ',
+  table:    'DetergentEntries',
+  scopes:   ['Files.ReadWrite','User.Read']
+};
+let msalApp = null, cloudAccount = null;
+
+function cloudInit(){
+  if(typeof msal==='undefined'){ setCloudBtn('offline'); return; }
+  try{
+    msalApp = new msal.PublicClientApplication({
+      auth:{
+        clientId: CLOUD.clientId,
+        authority: 'https://login.microsoftonline.com/'+CLOUD.tenantId,
+        redirectUri: window.location.origin + window.location.pathname
+      },
+      cache:{ cacheLocation:'localStorage' }
+    });
+    msalApp.handleRedirectPromise().then(resp=>{
+      if(resp && resp.account){ cloudAccount = resp.account; }
+      else { const accts = msalApp.getAllAccounts(); if(accts.length) cloudAccount = accts[0]; }
+      setCloudBtn(cloudAccount?'in':'out');
+      if(cloudAccount) flushOutbox();
+    }).catch(()=>setCloudBtn('out'));
+  }catch(e){ setCloudBtn('offline'); }
+}
+function cloudButtonClick(){
+  if(!msalApp){ showToast('Cloud unavailable — check internet connection'); return; }
+  if(cloudAccount){
+    if(confirm('Signed in as '+(cloudAccount.username||'work account')+'. Sign out?')){
+      msalApp.logoutRedirect({account:cloudAccount});
+    }
+  } else {
+    msalApp.loginRedirect({scopes:CLOUD.scopes});
+  }
+}
+function setCloudBtn(state){
+  const b=document.getElementById('cloud-btn'); if(!b)return;
+  if(state==='in'){ b.innerHTML='&#9729; SYNCED'; b.style.background='rgba(39,174,96,.35)'; }
+  else if(state==='out'){ b.innerHTML='&#9729; SIGN IN'; b.style.background='rgba(255,255,255,.15)'; }
+  else { b.innerHTML='&#9729; OFFLINE'; b.style.background='rgba(255,255,255,.10)'; }
+}
+async function getToken(){
+  if(!msalApp||!cloudAccount) return null;
+  try{
+    const r = await msalApp.acquireTokenSilent({scopes:CLOUD.scopes, account:cloudAccount});
+    return r.accessToken;
+  }catch(e){
+    try{ await msalApp.acquireTokenRedirect({scopes:CLOUD.scopes, account:cloudAccount}); }catch(_){}
+    return null;
+  }
+}
+// Append rows to the Excel table. rows = array of [EntryDate, Detergent, Area, Quantity, ContainerType, Gallons]
+async function graphAddRows(rows){
+  const token = await getToken();
+  if(!token) throw new Error('no-token');
+  const url = 'https://graph.microsoft.com/v1.0/drives/'+CLOUD.driveId+'/items/'+CLOUD.itemId+
+              '/workbook/tables/'+CLOUD.table+'/rows/add';
+  const resp = await fetch(url,{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    body: JSON.stringify({values: rows})
+  });
+  if(!resp.ok){ throw new Error('graph-'+resp.status); }
+  return true;
+}
+// Outbox: rows that failed to upload wait in localStorage and retry
+function queueRows(rows){
+  DB.outbox = (DB.outbox||[]).concat(rows);
+  saveDB();
+  updateStorageBar();
+}
+async function flushOutbox(){
+  const box = DB.outbox||[];
+  if(!box.length || !cloudAccount) return;
+  try{
+    for(let i=0;i<box.length;i+=100){
+      await graphAddRows(box.slice(i,i+100));
+    }
+    DB.outbox=[];
+    saveDB();
+    showToast('Cloud sync complete — all queued entries uploaded');
+  }catch(e){ /* stays queued */ }
+  updateStorageBar();
+}
+async function sendRows(rows){
+  if(!cloudAccount){ queueRows(rows); return 'queued'; }
+  try{ await graphAddRows(rows); flushOutbox(); return 'sent'; }
+  catch(e){ queueRows(rows); return 'queued'; }
+}
+// One-time history sync: pushes all built-in historical data to the workbook
+async function syncHistory(){
+  if(!cloudAccount){ showToast('Sign in first (cloud button, top right)'); return; }
+  const rows=[];
+  allDates().forEach(d=>{
+    DETS.forEach((name,i)=>{
+      const tk=(DB.tank[d]||{})[i];
+      if(tk!==undefined) rows.push([d,name,'Pod Tank',tk,'Gallons',tk]);
+      const og=(DB.onhand[d]||{})[i], oq=(DB.ohqty[d]||{})[i];
+      if(og!==undefined) rows.push([d,name,'Inventory',oq!==undefined?oq:og,oq!==undefined?(oq>0&&Math.abs(og/oq-30)<0.01?'30 Gal Drum':'EasyChem Container'):'Gallons',og]);
+      const dg=(DB.delivery[d]||{})[i];
+      if(dg!==undefined&&dg>0) rows.push([d,name,'Delivered',dg,'Gallons',dg]);
+    });
+  });
+  let start = DB.histSyncedCount||0;   // resume point — prevents duplicate rows
+  if(start>=rows.length){ showToast('History already fully synced ('+rows.length+' rows)'); return; }
+  if(start===0 && !confirm('Upload ALL historical data ('+allDates().length+' days, '+rows.length+' rows) to DetergentEntries.xlsx? Do this only once.')) return;
+  const btn=document.getElementById('sync-hist-btn');
+  try{
+    for(let i=start;i<rows.length;i+=100){
+      await graphAddRows(rows.slice(i,i+100));
+      DB.histSyncedCount=Math.min(i+100,rows.length);
+      saveDB();
+      if(btn) btn.textContent='Syncing… '+DB.histSyncedCount+' / '+rows.length+' rows';
+    }
+    if(btn) btn.textContent='History synced ('+rows.length+' rows)';
+    showToast('History uploaded: '+rows.length+' rows');
+  }catch(e){
+    if(btn) btn.textContent='Sync paused at '+(DB.histSyncedCount||0)+' / '+rows.length+' — tap to resume';
+    showToast('Sync interrupted — tap the button again to continue where it left off');
+  }
+}
+
+const DET_COLORS=[
+  {bg:'#9B59B6',text:'#fff'},
+  {bg:'#00CC00',text:'#fff'},
+  {bg:'#FF69B4',text:'#fff'},
+  {bg:'#4B6B1A',text:'#fff'},
+  {bg:'#D4C000',text:'#fff'},
+  {bg:'#00FFCC',text:'#333'},
+  {bg:'#F5A800',text:'#fff'},
+  {bg:'#8A9BA8',text:'#fff'},
+  {bg:'#1B3A6B',text:'#fff'},
+  {bg:'#7B2D00',text:'#fff'},
+];
+
+const DETS=[
+  'Presoak #1','Scent #2','Brite #3','Vacation #4','Ceramic Wax #5',
+  'Guard #6','Drying Agent #7','Tire Gloss #8','Cloth & Window #9','Wall & Equip #10'
+];
+
+// Historical data from your spreadsheet (Dec 23 2025 - Apr 17 2026)
+// onhand = gallons (containers * gal/unit), delivery = gallons
+function defaultDB(){
+  return {
+    tank:{"2025-12-23":{"0":24.0,"1":14.5,"2":24.0,"3":30.0,"4":9.5,"5":4.0,"6":32.0,"7":26.5,"8":17.0,"9":7.0},"2025-12-24":{"0":21.0,"1":13.0,"2":21.0,"3":28.0,"4":9.0,"5":9.0,"6":31.5,"7":26.0,"8":16.0,"9":30.0},"2025-12-26":{"0":14.0,"1":11.0,"2":16.0,"3":25.0,"4":8.5,"5":7.0,"6":30.0,"7":25.0,"8":15.0,"9":29.5},"2025-12-27":{"0":40.0,"1":9.5,"2":13.0,"3":23.5,"4":8.0,"5":6.5,"6":29.0,"7":24.0,"8":10.0,"9":28.0},"2025-12-28":{"0":39.0,"1":9.0,"2":12.0,"3":23.0,"4":8.0,"5":6.0,"6":28.5,"7":24.0,"8":9.0,"9":27.0},"2025-12-29":{"0":37.0,"1":8.0,"2":10.0,"3":22.0,"4":8.0,"5":11.0,"6":28.0,"7":23.5,"8":8.0,"9":26.0},"2025-12-30":{"0":32.0,"1":11.5,"2":38.0,"3":20.0,"4":7.0,"5":9.5,"6":26.0,"7":22.0,"8":5.0,"9":25.0},"2025-12-31":{"0":27.0,"1":9.5,"2":33.0,"3":17.0,"4":7.0,"5":9.0,"6":24.0,"7":21.0,"8":21.5,"9":24.0},"2026-01-01":{"0":25.0,"1":9.0,"2":31.5,"3":16.5,"4":6.0,"5":8.0,"6":23.0,"7":20.0,"8":21.0,"9":23.0},"2026-01-02":{"0":23.5,"1":8.0,"2":29.0,"3":15.5,"4":6.0,"5":8.0,"6":22.0,"7":20.0,"8":20.0,"9":23.0},"2026-01-03":{"0":20.5,"1":7.0,"2":26.0,"3":14.0,"4":6.0,"5":7.5,"6":20.5,"7":19.5,"8":15.0,"9":22.0},"2026-01-04":{"0":14.0,"1":4.5,"2":19.0,"3":11.0,"4":6.0,"5":6.0,"6":17.0,"7":18.5,"8":14.0,"9":19.0},"2026-01-05":{"0":9.0,"1":8.0,"2":13.0,"3":8.5,"4":11.0,"5":11.0,"6":14.0,"7":17.5,"8":14.0,"9":18.0},"2026-01-06":{"0":33.0,"1":6.0,"2":6.0,"3":6.0,"4":11.0,"5":9.5,"6":11.5,"7":16.0,"8":13.0,"9":16.0},"2026-01-07":{"0":28.0,"1":9.0,"2":32.0,"3":33.0,"4":9.5,"5":8.0,"6":9.0,"7":15.0,"8":10.0,"9":15.5},"2026-01-08":{"0":27.0,"1":8.5,"2":31.5,"3":33.0,"4":9.5,"5":7.5,"6":9.0,"7":15.0,"8":8.0,"9":13.0},"2026-01-09":{"0":23.0,"1":7.0,"2":26.0,"3":31.0,"4":8.0,"5":6.0,"6":7.0,"7":14.0,"8":8.0,"9":12.5},"2026-01-10":{"0":20.0,"1":6.0,"2":22.5,"3":29.5,"4":7.0,"5":11.0,"6":35.0,"7":13.0,"8":6.0,"9":10.0},"2026-01-11":{"0":16.0,"1":10.0,"2":19.0,"3":28.0,"4":7.0,"5":10.0,"6":34.0,"7":12.0,"8":5.0,"9":9.0},"2026-01-12":{"0":12.0,"1":8.0,"2":14.0,"3":26.5,"4":6.0,"5":9.0,"6":33.0,"7":12.0,"8":4.5,"9":8.0},"2026-01-13":{"0":10.0,"1":7.0,"2":11.0,"3":25.0,"4":5.5,"5":8.0,"6":33.0,"7":11.0,"8":3.5,"9":7.5},"2026-01-14":{"0":8.0,"1":6.0,"2":8.0,"3":25.0,"4":5.5,"5":7.5,"6":33.0,"7":10.0,"8":3.0,"9":6.5},"2026-01-15":{"0":36.0,"1":5.0,"2":6.0,"3":24.0,"4":4.0,"5":7.0,"6":32.0,"7":10.0,"8":3.0,"9":5.0},"2026-01-16":{"0":34.0,"1":4.5,"2":3.0,"3":22.5,"4":4.0,"5":6.5,"6":32.0,"7":9.5,"8":18.0,"9":4.5},"2026-01-17":{"0":33.0,"1":9.0,"2":34.0,"3":22.0,"4":4.0,"5":6.0,"6":32.0,"7":4.0,"8":16.0,"9":14.0},"2026-01-18":{"0":31.0,"1":9.0,"2":32.0,"3":21.0,"4":3.0,"5":6.0,"6":32.0,"7":9.0,"8":14.0,"9":13.0},"2026-01-19":{"0":29.0,"1":7.5,"2":29.5,"3":21.0,"4":3.0,"5":5.5,"6":31.0,"7":8.0,"8":12.5,"9":12.0},"2026-01-20":{"0":27.0,"1":7.0,"2":27.0,"3":20.0,"4":8.0,"5":5.0,"6":30.5,"7":8.0,"8":11.0,"9":12.0},"2026-01-21":{"0":24.0,"1":10.0,"2":31.0,"3":18.0,"4":8.0,"5":10.0,"6":30.0,"7":7.0,"8":9.5,"9":11.0},"2026-01-22":{"0":22.0,"1":9.0,"2":29.0,"3":17.5,"4":8.5,"5":9.5,"6":29.5,"7":2.0,"8":8.0,"9":10.0},"2026-01-23":{"0":22.0,"1":9.0,"2":28.0,"3":17.0,"4":8.0,"5":9.5,"6":29.5,"7":30.5,"8":5.0,"9":7.0},"2026-01-24":{"0":20.5,"1":8.0,"2":27.0,"3":17.0,"4":8.0,"5":9.5,"6":29.0,"7":30.0,"8":13.0,"9":14.0},"2026-01-25":{"0":18.0,"1":6.0,"2":25.0,"3":16.0,"4":8.0,"5":9.0,"6":29.0,"7":29.0,"8":11.0,"9":12.5},"2026-01-26":{"0":15.0,"1":4.0,"2":21.0,"3":14.5,"4":8.0,"5":9.0,"6":29.0,"7":29.0,"8":10.0,"9":11.5},"2026-01-27":{"0":11.0,"1":7.0,"2":16.0,"3":12.5,"4":7.0,"5":8.5,"6":27.5,"7":27.5,"8":6.0,"9":10.0},"2026-01-28":{"0":37.0,"1":5.0,"2":10.0,"3":10.5,"4":7.0,"5":8.5,"6":26.5,"7":27.0,"8":5.0,"9":9.0},"2026-01-29":{"0":33.5,"1":9.0,"2":1.5,"3":9.0,"4":6.0,"5":8.5,"6":25.5,"7":26.5,"8":23.0,"9":8.5},"2026-01-30":{"0":30.0,"1":7.5,"2":30.0,"3":8.0,"4":5.5,"5":8.0,"6":25.0,"7":25.5,"8":22.0,"9":8.0},"2026-01-31":{"0":27.0,"1":6.0,"2":27.5,"3":6.0,"4":11.0,"5":7.0,"6":24.0,"7":24.0,"8":19.5,"9":5.0},"2026-02-01":{"0":20.0,"1":3.5,"2":21.0,"3":4.0,"4":10.5,"5":6.0,"6":21.5,"7":23.0,"8":19.0,"9":4.5},"2026-02-02":{"0":14.0,"1":6.0,"2":15.0,"3":32.0,"4":10.0,"5":5.0,"6":17.0,"7":22.0,"8":15.0,"9":24.0},"2026-02-03":{"0":11.0,"1":10.0,"2":12.0,"3":31.0,"4":10.0,"5":9.0,"6":14.0,"7":21.0,"8":15.0,"9":23.0},"2026-02-04":{"0":39.0,"1":9.0,"2":10.0,"3":30.0,"4":10.0,"5":8.0,"6":10.5,"7":20.5,"8":13.5,"9":22.0},"2026-02-05":{"0":31.5,"1":6.0,"2":1.0,"3":27.0,"4":9.5,"5":5.0,"6":3.0,"7":19.0,"8":13.5,"9":21.0},"2026-02-06":{"0":26.5,"1":4.0,"2":29.0,"3":25.0,"4":9.5,"5":9.0,"6":31.0,"7":18.0,"8":12.0,"9":20.5},"2026-02-07":{"0":22.0,"1":8.0,"2":25.0,"3":23.0,"4":9.0,"5":8.5,"6":29.0,"7":17.0,"8":8.5,"9":19.0},"2026-02-08":{"0":16.5,"1":6.0,"2":20.0,"3":21.5,"4":8.5,"5":7.0,"6":26.5,"7":16.0,"8":8.0,"9":18.5},"2026-02-09":{"0":12.0,"1":9.5,"2":16.0,"3":19.5,"4":9.5,"5":4.5,"6":25.0,"7":15.0,"8":31.0,"9":17.0},"2026-02-10":{"0":9.0,"1":8.0,"2":12.5,"3":18.0,"4":9.0,"5":3.5,"6":23.5,"7":14.0,"8":16.0,"9":16.0},"2026-02-11":{"0":35.0,"1":7.0,"2":9.0,"3":16.0,"4":9.0,"5":2.5,"6":22.0,"7":13.0,"8":15.0,"9":15.5},"2026-02-12":{"0":31.5,"1":6.0,"2":38.0,"3":15.0,"4":9.0,"5":6.0,"6":20.5,"7":13.0,"8":13.0,"9":15.0},"2026-02-13":{"0":26.5,"1":4.0,"2":33.0,"3":13.0,"4":9.0,"5":5.0,"6":17.5,"7":12.0,"8":12.0,"9":14.0},"2026-02-14":{"0":22.0,"1":7.5,"2":29.0,"3":11.0,"4":9.0,"5":4.0,"6":14.0,"7":11.0,"8":10.0,"9":13.0},"2026-02-15":{"0":17.0,"1":5.5,"2":24.0,"3":9.0,"4":9.0,"5":7.0,"6":10.0,"7":10.0,"8":9.0,"9":12.0},"2026-02-16":{"0":13.0,"1":4.0,"2":20.0,"3":7.0,"4":9.0,"5":6.0,"6":8.0,"7":9.0,"8":8.5,"9":11.0},"2026-02-17":{"0":10.0,"1":8.5,"2":17.0,"3":6.0,"4":8.0,"5":10.0,"6":7.0,"7":8.0,"8":6.0,"9":10.0},"2026-02-18":{"0":6.0,"1":7.0,"2":13.0,"3":34.0,"4":7.5,"5":8.5,"6":7.0,"7":29.0,"8":21.0,"9":9.0},"2026-02-19":{"0":36.0,"1":6.5,"2":13.0,"3":33.5,"4":7.5,"5":8.0,"6":6.0,"7":29.0,"8":20.0,"9":8.0},"2026-02-20":{"0":33.0,"1":5.5,"2":10.0,"3":33.0,"4":6.0,"5":7.0,"6":5.0,"7":29.0,"8":17.5,"9":7.0},"2026-02-21":{"0":29.0,"1":9.0,"2":6.5,"3":32.0,"4":5.0,"5":5.0,"6":33.0,"7":28.5,"8":15.5,"9":6.0},"2026-02-22":{"0":26.0,"1":8.0,"2":48.0,"3":31.5,"4":5.0,"5":4.0,"6":32.0,"7":28.0,"8":14.5,"9":5.0},"2026-02-23":{"0":23.0,"1":6.5,"2":43.0,"3":31.0,"4":5.0,"5":9.0,"6":30.0,"7":28.0,"8":14.0,"9":9.0},"2026-02-24":{"0":17.5,"1":5.0,"2":38.0,"3":29.5,"4":8.0,"5":7.5,"6":27.0,"7":28.0,"8":11.5,"9":8.5},"2026-02-25":{"0":15.5,"1":8.5,"2":34.0,"3":28.5,"4":7.0,"5":6.0,"6":24.0,"7":28.0,"8":11.0,"9":7.0},"2026-02-26":{"0":15.5,"1":6.0,"2":26.0,"3":27.0,"4":4.5,"5":4.5,"6":19.5,"7":29.0,"8":10.0,"9":6.5},"2026-02-27":{"0":28.0,"1":9.0,"2":16.0,"3":25.0,"4":9.0,"5":7.5,"6":15.0,"7":29.0,"8":8.5,"9":6.0},"2026-02-28":{"0":21.0,"1":7.0,"2":9.0,"3":23.5,"4":8.0,"5":6.0,"6":11.5,"7":29.0,"8":5.0,"9":4.5},"2026-03-01":{"0":17.0,"1":6.0,"2":39.0,"3":23.0,"4":8.0,"5":5.0,"6":10.0,"7":29.0,"8":4.5,"9":14.0},"2026-03-02":{"0":13.0,"1":5.0,"2":37.0,"3":22.0,"4":7.0,"5":4.0,"6":7.5,"7":29.0,"8":19.5,"9":13.0},"2026-03-03":{"0":9.0,"1":9.0,"2":34.0,"3":22.0,"4":6.0,"5":9.0,"6":5.0,"7":29.0,"8":18.0,"9":12.0},"2026-03-04":{"0":35.0,"1":7.5,"2":31.0,"3":21.0,"4":5.0,"5":8.0,"6":33.0,"7":29.0,"8":16.0,"9":12.0},"2026-03-05":{"0":30.5,"1":6.0,"2":27.0,"3":19.5,"4":9.5,"5":6.5,"6":30.5,"7":27.0,"8":12.5,"9":11.0},"2026-03-06":{"0":27.0,"1":10.0,"2":23.5,"3":19.0,"4":9.0,"5":22.0,"6":28.0,"7":26.0,"8":11.0,"9":10.0},"2026-03-07":{"0":19.5,"1":8.0,"2":18.0,"3":17.0,"4":8.0,"5":20.0,"6":24.0,"7":22.5,"8":8.5,"9":9.0},"2026-03-08":{"0":12.0,"1":6.0,"2":11.0,"3":15.0,"4":6.5,"5":17.0,"6":19.5,"7":22.5,"8":7.0,"9":8.0},"2026-03-09":{"0":5.0,"1":4.0,"2":4.0,"3":14.0,"4":6.0,"5":14.0,"6":16.0,"7":22.5,"8":5.5,"9":7.5},"2026-03-10":{"0":30.0,"1":7.5,"2":32.0,"3":12.5,"4":5.0,"5":12.0,"6":13.0,"7":21.0,"8":20.0,"9":6.0},"2026-03-11":{"0":24.0,"1":6.0,"2":28.5,"3":11.0,"4":9.0,"5":10.0,"6":9.5,"7":19.5,"8":18.0,"9":6.0},"2026-03-12":{"0":19.0,"1":4.5,"2":25.5,"3":10.5,"4":8.0,"5":8.0,"6":7.0,"7":19.0,"8":17.0,"9":4.0},"2026-03-13":{"0":12.5,"1":8.5,"2":21.5,"3":9.5,"4":7.5,"5":5.0,"6":4.0,"7":17.5,"8":15.0,"9":14.0},"2026-03-14":{"0":37.0,"1":6.0,"2":18.0,"3":8.0,"4":6.0,"5":9.0,"6":32.0,"7":16.0,"8":12.0,"9":13.0},"2026-03-15":{"0":36.0,"1":6.0,"2":17.0,"3":8.0,"4":6.0,"5":9.0,"6":31.0,"7":15.0,"8":9.5,"9":12.0},"2026-03-16":{"0":30.0,"1":5.0,"2":14.0,"3":7.0,"4":6.0,"5":9.0,"6":28.0,"7":14.0,"8":9.0,"9":11.0},"2026-03-17":{"0":26.0,"1":9.0,"2":12.0,"3":6.0,"4":10.0,"5":8.5,"6":26.0,"7":13.0,"8":7.0,"9":10.0},"2026-03-18":{"0":14.0,"1":6.0,"2":5.0,"3":34.0,"4":9.0,"5":5.0,"6":18.0,"7":10.0,"8":5.0,"9":9.0},"2026-03-19":{"0":2.0,"1":8.5,"2":29.0,"3":32.0,"4":7.0,"5":7.0,"6":11.0,"7":9.0,"8":24.0,"9":9.0},"2026-03-20":{"0":23.0,"1":6.0,"2":19.0,"3":28.5,"4":7.0,"5":4.0,"6":3.0,"7":6.5,"8":23.0,"9":9.0},"2026-03-21":{"0":13.0,"1":4.0,"2":11.0,"3":26.0,"4":6.0,"5":5.5,"6":28.5,"7":4.5,"8":20.0,"9":8.0},"2026-03-22":{"0":7.0,"1":7.0,"2":6.5,"3":24.0,"4":5.0,"5":4.0,"6":25.0,"7":30.0,"8":20.0,"9":7.0},"2026-03-23":{"0":35.0,"1":6.0,"2":36.0,"3":23.0,"4":5.0,"5":8.0,"6":22.0,"7":29.0,"8":18.0,"9":6.5},"2026-03-24":{"0":31.0,"1":10.0,"2":32.0,"3":22.0,"4":7.0,"5":6.5,"6":19.0,"7":27.0,"8":16.0,"9":5.0},"2026-03-25":{"0":24.0,"1":8.0,"2":26.0,"3":20.0,"4":5.5,"5":4.0,"6":14.0,"7":24.5,"8":13.5,"9":25.0},"2026-03-26":{"0":19.5,"1":6.0,"2":21.5,"3":18.0,"4":5.0,"5":8.0,"6":10.5,"7":23.0,"8":13.0,"9":24.0},"2026-03-27":{"0":14.0,"1":4.0,"2":16.0,"3":16.5,"4":9.0,"5":6.0,"6":5.0,"7":20.0,"8":9.0,"9":24.0},"2026-03-28":{"0":8.5,"1":7.0,"2":11.5,"3":15.0,"4":8.5,"5":4.0,"6":34.0,"7":18.5,"8":6.5,"9":22.5},"2026-03-29":{"0":33.5,"1":5.0,"2":5.0,"3":12.5,"4":8.0,"5":8.0,"6":31.0,"7":18.0,"8":6.0,"9":22.0},"2026-03-30":{"0":28.0,"1":9.0,"2":31.0,"3":10.5,"4":7.0,"5":6.0,"6":29.0,"7":18.0,"8":5.0,"9":21.0},"2026-03-31":{"0":24.0,"1":7.5,"2":27.0,"3":9.5,"4":6.0,"5":5.0,"6":27.0,"7":17.0,"8":23.0,"9":20.0},"2026-04-01":{"0":23.0,"1":7.0,"2":26.0,"3":9.0,"4":11.0,"5":10.0,"6":26.5,"7":16.0,"8":21.5,"9":19.0},"2026-04-02":{"0":21.5,"1":6.5,"2":24.0,"3":8.0,"4":10.5,"5":9.5,"6":26.0,"7":16.0,"8":20.5,"9":18.0},"2026-04-03":{"0":20.0,"1":6.0,"2":23.0,"3":8.0,"4":10.5,"5":9.0,"6":25.0,"7":15.0,"8":19.0,"9":16.0},"2026-04-04":{"0":15.5,"1":4.0,"2":18.5,"3":6.0,"4":10.0,"5":8.0,"6":23.0,"7":13.0,"8":17.0,"9":14.0},"2026-04-06":{"0":11.0,"1":8.0,"2":14.0,"3":5.0,"4":9.0,"5":6.0,"6":20.0,"7":11.0,"8":16.0,"9":13.0},"2026-04-07":{"0":8.0,"1":6.0,"2":11.0,"3":34.0,"4":9.0,"5":10.5,"6":18.0,"7":10.0,"8":14.5,"9":12.0},"2026-04-08":{"0":32.0,"1":9.0,"2":4.0,"3":32.0,"4":8.0,"5":8.0,"6":15.0,"7":7.0,"8":12.0,"9":11.0},"2026-04-09":{"0":31.0,"1":8.5,"2":34.0,"3":32.0,"4":7.5,"5":7.5,"6":15.0,"7":7.0,"8":11.0,"9":9.0},"2026-04-10":{"0":26.0,"1":6.0,"2":29.5,"3":30.0,"4":7.0,"5":6.0,"6":12.0,"7":6.0,"8":10.5,"9":7.5},"2026-04-11":{"0":23.0,"1":10.5,"2":27.0,"3":29.0,"4":12.0,"5":11.0,"6":10.5,"7":29.0,"8":7.0,"9":7.0},"2026-04-12":{"0":16.5,"1":8.0,"2":21.0,"3":27.5,"4":11.0,"5":9.0,"6":8.0,"7":28.5,"8":7.0,"9":6.5},"2026-04-13":{"0":10.0,"1":6.5,"2":14.0,"3":26.0,"4":10.0,"5":7.0,"6":4.5,"7":28.5,"8":6.0,"9":5.0},"2026-04-14":{"0":4.0,"1":5.0,"2":8.0,"3":24.0,"4":9.0,"5":5.0,"6":34.0,"7":28.5,"8":3.0,"9":4.5},"2026-04-15":{"0":29.0,"1":8.0,"2":32.0,"3":22.0,"4":8.5,"5":8.0,"6":31.0,"7":28.5,"8":23.0,"9":24.0},"2026-04-16":{"0":21.0,"1":6.0,"2":24.5,"3":19.5,"4":8.0,"5":5.5,"6":28.5,"7":28.5,"8":21.0,"9":24.0},"2026-04-17":{"0":16.0,"1":9.5,"2":20.0,"3":18.0,"4":7.0,"5":9.0,"6":26.5,"7":28.5,"8":20.0,"9":23.0},"2026-04-18":{"0":15.5,"1":7.0,"2":15.5,"3":16.0,"4":6.5,"5":8.0,"6":24.5,"7":28.5,"8":18.0,"9":21.0},"2026-04-19":{"0":6.0,"1":6.0,"2":10.0,"3":15.0,"4":6.0,"5":6.0,"6":22.0,"7":27.5,"8":18.0,"9":20.0},"2026-04-20":{"0":32.0,"1":9.0,"2":5.0,"3":13.0,"4":5.0,"5":5.0,"6":20.0,"7":26.0,"8":17.0,"9":19.0},"2026-04-21":{"0":25.5,"1":7.0,"2":30.5,"3":11.0,"4":10.0,"5":8.0,"6":17.0,"7":25.0,"8":16.0,"9":18.0},"2026-04-22":{"0":20.0,"1":5.0,"2":24.0,"3":9.0,"4":10.0,"5":6.0,"6":17.0,"7":21.5,"8":14.0,"9":17.5},"2026-04-23":{"0":16.0,"1":3.5,"2":20.5,"3":7.0,"4":9.5,"5":4.5,"6":16.5,"7":19.0,"8":14.0,"9":16.0},"2026-04-24":{"0":9.5,"1":7.0,"2":13.0,"3":5.0,"4":9.5,"5":8.0,"6":16.5,"7":18.0,"8":13.0,"9":15.5},"2026-04-25":{"0":37.5,"1":6.5,"2":10.0,"3":4.5,"4":9.5,"5":7.5,"6":16.0,"7":18.0,"8":13.0,"9":15.5},"2026-04-26":{"0":36.0,"1":5.0,"2":8.0,"3":4.0,"4":9.5,"5":7.0,"6":15.0,"7":17.0,"8":9.5,"9":15.0},"2026-04-27":{"0":34.0,"1":10.0,"2":7.0,"3":33.0,"4":9.5,"5":7.0,"6":15.0,"7":17.0,"8":9.0,"9":14.0},"2026-04-28":{"0":31.0,"1":9.0,"2":35.0,"3":32.0,"4":9.5,"5":11.0,"6":14.0,"7":15.0,"8":7.5,"9":12.0},"2026-04-29":{"0":25.0,"1":7.0,"2":28.0,"3":29.5,"4":9.5,"5":10.0,"6":43.0,"7":13.0,"8":16.0,"9":12.0},"2026-04-30":{"0":20.5,"1":5.0,"2":27.5,"3":28.0,"4":9.0,"5":9.0,"6":42.5,"7":12.0,"8":14.5,"9":10.5},"2026-05-01":{"0":15.0,"1":8.0,"2":17.0,"3":26.0,"4":9.0,"5":7.5,"6":42.5,"7":9.5,"8":14.0,"9":10.0},"2026-05-02":{"0":9.0,"1":6.0,"2":11.0,"3":24.0,"4":8.5,"5":6.5,"6":42.0,"7":6.5,"8":11.5,"9":9.0},"2026-05-03":{"0":33.0,"1":4.0,"2":3.0,"3":22.0,"4":8.5,"5":5.0,"6":42.0,"7":3.0,"8":11.0,"9":8.0},"2026-05-04":{"0":26.5,"1":7.0,"2":28.0,"3":20.0,"4":8.5,"5":8.0,"6":42.0,"7":29.0,"8":9.5,"9":8.0},"2026-05-05":{"0":22.0,"1":6.0,"2":23.5,"3":18.0,"4":8.0,"5":7.0,"6":40.5,"7":29.0,"8":8.5,"9":6.0},"2026-05-06":{"0":22.0,"1":9.0,"2":18.5,"3":16.5,"4":10.0,"5":7.5,"6":37.0,"7":29.0,"8":7.5,"9":5.5},"2026-05-07":{"0":10.0,"1":7.0,"2":12.0,"3":14.0,"4":9.5,"5":7.0,"6":32.0,"7":29.5,"8":7.0,"9":4.5},"2026-05-08":{"0":12.0,"1":5.0,"2":4.0,"3":12.0,"4":9.5,"5":7.0,"6":30.0,"7":29.0,"8":6.0,"9":8.0},"2026-05-09":{"0":27.5,"1":7.5,"2":27.5,"3":8.5,"4":9.0,"5":7.0,"6":30.0,"7":26.5,"8":2.5,"9":7.5},"2026-05-10":{"0":21.0,"1":6.0,"2":21.5,"3":7.0,"4":9.0,"5":7.0,"6":30.0,"7":25.5,"8":18.0,"9":7.5},"2026-05-11":{"0":12.5,"1":3.0,"2":14.5,"3":4.0,"4":9.0,"5":5.0,"6":30.0,"7":24.5,"8":17.0,"9":6.0},"2026-05-12":{"0":3.5,"1":7.0,"2":6.0,"3":32.5,"4":8.0,"5":7.5,"6":24.0,"7":22.0,"8":16.5,"9":4.5},"2026-05-13":{"0":26.0,"1":6.0,"2":29.0,"3":30.0,"4":7.0,"5":6.0,"6":22.0,"7":21.0,"8":15.5,"9":13.0},"2026-05-14":{"0":18.0,"1":7.5,"2":22.0,"3":27.5,"4":6.5,"5":8.5,"6":19.5,"7":19.0,"8":15.0,"9":12.0},"2026-05-15":{"0":7.5,"1":5.0,"2":13.0,"3":25.0,"4":4.0,"5":4.0,"6":13.5,"7":17.0,"8":13.0,"9":12.0},"2026-05-16":{"0":30.5,"1":3.0,"2":6.5,"3":22.0,"4":8.5,"5":6.5,"6":8.5,"7":15.5,"8":11.0,"9":10.5},"2026-05-17":{"0":24.5,"1":6.5,"2":34.0,"3":20.5,"4":8.0,"5":4.5,"6":4.0,"7":14.0,"8":9.0,"9":10.0},"2026-05-18":{"0":22.0,"1":5.5,"2":32.0,"3":20.0,"4":7.5,"5":9.0,"6":28.5,"7":14.0,"8":8.5,"9":8.0},"2026-05-19":{"0":18.0,"1":9.0,"2":28.0,"3":18.5,"4":12.0,"5":7.0,"6":25.0,"7":13.0,"8":6.5,"9":5.0},"2026-05-20":{"0":44.0,"1":8.0,"2":25.0,"3":17.0,"4":11.0,"5":5.0,"6":22.0,"7":12.0,"8":11.0,"9":14.0},"2026-05-21":{"0":40.0,"1":6.0,"2":22.0,"3":15.5,"4":10.0,"5":9.0,"6":19.0,"7":11.5,"8":10.0,"9":12.5},"2026-05-22":{"0":36.5,"1":5.0,"2":19.0,"3":14.0,"4":10.0,"5":7.0,"6":16.5,"7":10.5,"8":8.0,"9":11.0},"2026-05-23":{"0":29.0,"1":3.0,"2":13.0,"3":12.0,"4":8.5,"5":4.0,"6":11.5,"7":9.0,"8":5.0,"9":9.5},"2026-05-24":{"0":22.5,"1":6.5,"2":7.5,"3":10.0,"4":8.0,"5":7.5,"6":6.5,"7":7.5,"8":3.0,"9":8.5},"2026-05-25":{"0":15.5,"1":4.0,"2":32.0,"3":8.0,"4":7.0,"5":5.0,"6":2.0,"7":6.0,"8":23.0,"9":8.0},"2026-05-26":{"0":38.5,"1":8.0,"2":26.0,"3":6.0,"4":6.5,"5":8.0,"6":8.0,"7":4.0,"8":22.0,"9":6.0},"2026-05-27":{"0":31.5,"1":6.0,"2":20.0,"3":33.5,"4":6.0,"5":6.0,"6":3.5,"7":28.0,"8":20.5,"9":4.5},"2026-05-28":{"0":26.0,"1":3.5,"2":15.5,"3":31.5,"4":5.0,"5":3.5,"6":19.5,"7":25.0,"8":20.0,"9":13.0},"2026-05-29":{"0":22.0,"1":7.5,"2":11.0,"3":30.0,"4":3.0,"5":7.0,"6":16.5,"7":24.0,"8":17.0,"9":12.0},"2026-05-30":{"0":17.5,"1":6.0,"2":7.0,"3":29.0,"4":8.0,"5":5.0,"6":13.5,"7":21.0,"8":15.0,"9":11.0},"2026-05-31":{"0":10.5,"1":4.0,"2":32.0,"3":26.5,"4":7.5,"5":3.0,"6":9.0,"7":17.5,"8":14.0,"9":10.0},"2026-06-01":{"0":34.0,"1":7.5,"2":25.0,"3":24.0,"4":7.0,"5":5.0,"6":4.0,"7":17.0,"8":12.0,"9":9.0},"2026-06-02":{"0":29.0,"1":5.5,"2":20.0,"3":22.0,"4":6.0,"5":8.0,"6":15.0,"7":14.0,"8":11.0,"9":7.0},"2026-06-03":{"0":23.0,"1":9.5,"2":14.0,"3":20.0,"4":11.0,"5":6.0,"6":10.5,"7":11.0,"8":8.0,"9":16.0},"2026-06-04":{"0":21.0,"1":8.5,"2":43.0,"3":19.5,"4":10.5,"5":5.0,"6":9.0,"7":10.0,"8":6.0,"9":14.0},"2026-06-05":{"0":14.0,"1":6.0,"2":35.5,"3":17.0,"4":9.0,"5":7.5,"6":3.5,"7":5.5,"8":5.0,"9":13.0},"2026-06-06":{"0":8.0,"1":4.0,"2":30.0,"3":14.5,"4":8.5,"5":4.5,"6":4.0,"7":1.5,"8":3.0,"9":12.0},"2026-06-07":{"0":33.0,"1":8.0,"2":24.5,"3":13.0,"4":8.0,"5":8.5,"6":6.0,"7":31.0,"8":18.0,"9":10.5},"2026-06-08":{"0":27.0,"1":6.5,"2":18.0,"3":11.0,"4":7.5,"5":8.0,"6":24.5,"7":29.5,"8":17.5,"9":10.0},"2026-06-09":{"0":21.5,"1":9.5,"2":12.0,"3":37.0,"4":7.0,"5":4.0,"6":20.0,"7":27.5,"8":3.0,"9":7.5},"2026-06-10":{"0":15.0,"1":7.5,"2":35.5,"3":35.0,"4":6.0,"5":6.5,"6":15.0,"7":24.0,"8":19.0,"9":6.0},"2026-06-11":{"0":39.0,"1":5.0,"2":30.0,"3":33.0,"4":5.0,"5":4.0,"6":11.0,"7":22.0,"8":17.0,"9":4.0},"2026-06-12":{"0":32.0,"1":3.5,"2":23.0,"3":30.5,"4":9.5,"5":7.0,"6":6.0,"7":19.0,"8":17.0,"9":8.0},"2026-06-13":{"0":29.0,"1":8.0,"2":19.5,"3":29.5,"4":9.0,"5":6.0,"6":29.0,"7":18.0,"8":11.0,"9":5.5},"2026-06-14":{"0":23.0,"1":5.5,"2":13.5,"3":27.0,"4":8.0,"5":3.5,"6":24.5,"7":15.0,"8":10.0,"9":3.5},"2026-06-15":{"0":16.5,"1":8.0,"2":8.0,"3":25.0,"4":7.5,"5":5.5,"6":20.0,"7":12.0,"8":9.0,"9":17.5},"2026-06-16":{"0":41.0,"1":6.5,"2":34.0,"3":23.0,"4":7.0,"5":3.0,"6":16.0,"7":9.0,"8":8.0,"9":16.5},"2026-06-17":{"0":35.0,"1":4.0,"2":28.0,"3":20.5,"4":8.0,"5":6.5,"6":11.5,"7":6.5,"8":7.0,"9":15.0},"2026-06-18":{"0":29.0,"1":7.0,"2":22.0,"3":18.0,"4":11.0,"5":3.5,"6":17.0,"7":4.0,"8":6.5,"9":14.0},"2026-06-19":{"0":23.0,"1":5.0,"2":16.0,"3":16.0,"4":10.5,"5":6.0,"6":13.0,"7":29.5,"8":5.5,"9":12.5},"2026-06-20":{"0":19.0,"1":8.0,"2":12.0,"3":14.0,"4":9.5,"5":9.0,"6":9.0,"7":26.5,"8":2.0,"9":10.0},"2026-06-21":{"0":16.0,"1":7.0,"2":10.0,"3":13.0,"4":9.0,"5":8.0,"6":7.0,"7":23.5,"8":12.0,"9":7.5},"2026-06-22":{"0":40.5,"1":5.5,"2":35.0,"3":11.0,"4":8.5,"5":5.0,"6":13.5,"7":18.5,"8":10.5,"9":6.5},"2026-06-23":{"0":36.0,"1":9.5,"2":31.0,"3":9.5,"4":8.0,"5":8.5,"6":10.0,"7":14.0,"8":9.5,"9":15.0},"2026-06-24":{"0":31.0,"1":8.0,"2":26.5,"3":7.5,"4":7.5,"5":6.5,"6":6.0,"7":10.0,"8":7.0,"9":13.0},"2026-06-25":{"0":27.0,"1":6.5,"2":22.5,"3":36.0,"4":7.0,"5":4.5,"6":13.0,"7":8.5,"8":6.5,"9":11.0},"2026-06-26":{"0":21.0,"1":4.5,"2":17.0,"3":33.0,"4":12.0,"5":7.0,"6":9.0,"7":7.0,"8":5.0,"9":9.5},"2026-06-27":{"0":15.5,"1":7.0,"2":12.0,"3":32.0,"4":11.5,"5":5.0,"6":5.5,"7":4.0,"8":3.0,"9":9.0},"2026-06-28":{"0":9.0,"1":4.5,"2":2.5,"3":29.0,"4":10.0,"5":3.5,"6":5.0,"7":30.0,"8":13.0,"9":9.0},"2026-06-29":{"0":31.0,"1":8.0,"2":27.0,"3":27.0,"4":9.5,"5":4.0,"6":12.0,"7":29.0,"8":12.0,"9":6.0},"2026-06-30":{"0":23.0,"1":5.5,"2":21.0,"3":24.5,"4":9.0,"5":6.5,"6":8.5,"7":29.0,"8":10.0,"9":4.0},"2026-07-01":{"0":17.5,"1":9.0,"2":15.5,"3":23.0,"4":8.5,"5":10.0,"6":5.0,"7":28.0,"8":9.5,"9":11.0},"2026-07-02":{"0":8.0,"1":7.0,"2":39.0,"3":20.5,"4":8.0,"5":7.0,"6":11.0,"7":26.0,"8":9.0,"9":9.0},"2026-07-03":{"0":33.0,"1":5.5,"2":33.0,"3":18.0,"4":7.0,"5":4.5,"6":8.0,"7":24.0,"8":8.0,"9":8.5},"2026-07-04":{"0":30.0,"1":4.0,"2":30.0,"3":17.5,"4":6.5,"5":9.0,"6":7.0,"7":23.5,"8":5.0,"9":7.0},"2026-07-05":{"0":21.5,"1":8.0,"2":24.0,"3":15.0,"4":6.0,"5":6.5,"6":3.5,"7":22.0,"8":4.0,"9":5.5},"2026-07-06":{"0":11.0,"1":5.5,"2":15.0,"3":12.0,"4":5.0,"5":3.0,"6":9.0,"7":19.5,"8":6.5,"9":3.5},"2026-07-07":{"0":35.0,"1":4.0,"2":9.0,"3":10.0,"4":4.5,"5":6.0,"6":6.0,"7":18.0,"8":5.0,"9":7.0},"2026-07-08":{"0":29.5,"1":7.0,"2":36.0,"3":8.0,"4":9.0,"5":4.0,"6":3.5,"7":16.5,"8":4.5,"9":6.0},"2026-07-09":{"0":23.0,"1":6.0,"2":31.0,"3":5.5,"4":8.5,"5":7.0,"6":5.5,"7":15.0,"8":9.0,"9":5.0},"2026-07-10":{"0":17.0,"1":9.0,"2":26.0,"3":4.0,"4":8.0,"5":4.5,"6":8.0,"7":13.0,"8":7.5,"9":8.0}},
+    onhand:{"2025-12-23":{"0":60.0,"1":25.0,"2":60.0,"3":0,"4":5.0,"5":35.0,"6":0,"7":0,"8":0,"9":35.0},"2025-12-24":{"0":60.0,"1":25.0,"2":60.0,"3":0,"4":5.0,"5":30.0,"6":0,"7":0,"8":0,"9":10.0},"2025-12-26":{"0":60.0,"1":25.0,"2":60.0,"3":0,"4":5.0,"5":30.0,"6":0,"7":0,"8":0,"9":10.0},"2025-12-27":{"0":30.0,"1":25.0,"2":60.0,"3":0,"4":5.0,"5":30.0,"6":0,"7":0,"8":0,"9":10.0},"2025-12-28":{"0":30.0,"1":25.0,"2":60.0,"3":0,"4":5.0,"5":30.0,"6":0,"7":0,"8":0,"9":10.0},"2025-12-29":{"0":90.0,"1":25.0,"2":90.0,"3":30.0,"4":5.0,"5":25.0,"6":30.0,"7":0,"8":20.0,"9":10.0},"2025-12-30":{"0":90.0,"1":20.0,"2":60.0,"3":30.0,"4":5.0,"5":25.0,"6":30.0,"7":0,"8":20.0,"9":10.0},"2025-12-31":{"0":90.0,"1":20.0,"2":60.0,"3":30.0,"4":5.0,"5":25.0,"6":30.0,"7":0,"8":0,"9":10.0},"2026-01-01":{"0":90.0,"1":20.0,"2":60.0,"3":30.0,"4":5.0,"5":25.0,"6":30.0,"7":0,"8":0,"9":10.0},"2026-01-02":{"0":90.0,"1":20.0,"2":60.0,"3":30.0,"4":5.0,"5":25.0,"6":30.0,"7":0,"8":0,"9":10.0},"2026-01-03":{"0":90.0,"1":20.0,"2":60.0,"3":30.0,"4":5.0,"5":25.0,"6":30.0,"7":0,"8":0,"9":10.0},"2026-01-04":{"0":90.0,"1":20.0,"2":60.0,"3":30.0,"4":5.0,"5":25.0,"6":30.0,"7":0,"8":0,"9":10.0},"2026-01-05":{"0":90.0,"1":15.0,"2":60.0,"3":30.0,"4":0,"5":20.0,"6":30.0,"7":0,"8":0,"9":10.0},"2026-01-06":{"0":60.0,"1":15.0,"2":60.0,"3":30.0,"4":0,"5":20.0,"6":30.0,"7":0,"8":0,"9":10.0},"2026-01-07":{"0":60.0,"1":10.0,"2":30.0,"3":0,"4":0,"5":20.0,"6":30.0,"7":0,"8":0,"9":10.0},"2026-01-08":{"0":60.0,"1":10.0,"2":30.0,"3":0,"4":0,"5":20.0,"6":30.0,"7":0,"8":0,"9":10.0},"2026-01-09":{"0":60.0,"1":10.0,"2":30.0,"3":0,"4":0,"5":20.0,"6":30.0,"7":0,"8":0,"9":10.0},"2026-01-10":{"0":60.0,"1":10.0,"2":30.0,"3":0,"4":0,"5":15.0,"6":0,"7":0,"8":0,"9":10.0},"2026-01-11":{"0":60.0,"1":5.0,"2":30.0,"3":0,"4":0,"5":15.0,"6":0,"7":0,"8":0,"9":10.0},"2026-01-12":{"0":60.0,"1":5.0,"2":30.0,"3":0,"4":0,"5":15.0,"6":0,"7":0,"8":0,"9":10.0},"2026-01-13":{"0":60.0,"1":5.0,"2":30.0,"3":0,"4":0,"5":15.0,"6":0,"7":0,"8":0,"9":10.0},"2026-01-14":{"0":60.0,"1":5.0,"2":30.0,"3":0,"4":0,"5":15.0,"6":30.0,"7":0,"8":0,"9":10.0},"2026-01-15":{"0":60.0,"1":15.0,"2":60.0,"3":30.0,"4":0,"5":15.0,"6":30.0,"7":0,"8":15.0,"9":25.0},"2026-01-16":{"0":60.0,"1":15.0,"2":60.0,"3":30.0,"4":0,"5":15.0,"6":30.0,"7":0,"8":0,"9":25.0},"2026-01-17":{"0":60.0,"1":10.0,"2":30.0,"3":30.0,"4":0,"5":15.0,"6":30.0,"7":0,"8":0,"9":15.0},"2026-01-18":{"0":60.0,"1":10.0,"2":30.0,"3":30.0,"4":0,"5":15.0,"6":30.0,"7":0,"8":0,"9":15.0},"2026-01-19":{"0":60.0,"1":40.0,"2":60.0,"3":30.0,"4":20.0,"5":15.0,"6":30.0,"7":30.0,"8":30.0,"9":35.0},"2026-01-20":{"0":60.0,"1":40.0,"2":60.0,"3":30.0,"4":15.0,"5":15.0,"6":30.0,"7":30.0,"8":30.0,"9":35.0},"2026-01-21":{"0":60.0,"1":40.0,"2":60.0,"3":30.0,"4":15.0,"5":10.0,"6":30.0,"7":30.0,"8":30.0,"9":35.0},"2026-01-22":{"0":60.0,"1":40.0,"2":60.0,"3":30.0,"4":15.0,"5":10.0,"6":30.0,"7":30.0,"8":30.0,"9":35.0},"2026-01-23":{"0":60.0,"1":40.0,"2":60.0,"3":30.0,"4":15.0,"5":10.0,"6":30.0,"7":0,"8":30.0,"9":35.0},"2026-01-24":{"0":60.0,"1":40.0,"2":60.0,"3":30.0,"4":15.0,"5":10.0,"6":30.0,"7":0,"8":20.0,"9":25.0},"2026-01-25":{"0":60.0,"1":40.0,"2":60.0,"3":30.0,"4":15.0,"5":10.0,"6":30.0,"7":0,"8":20.0,"9":25.0},"2026-01-26":{"0":60.0,"1":40.0,"2":60.0,"3":30.0,"4":15.0,"5":10.0,"6":30.0,"7":0,"8":20.0,"9":25.0},"2026-01-27":{"0":60.0,"1":35.0,"2":60.0,"3":30.0,"4":15.0,"5":10.0,"6":30.0,"7":0,"8":20.0,"9":25.0},"2026-01-28":{"0":30.0,"1":35.0,"2":60.0,"3":30.0,"4":15.0,"5":10.0,"6":30.0,"7":0,"8":20.0,"9":25.0},"2026-01-29":{"0":30.0,"1":30.0,"2":60.0,"3":30.0,"4":15.0,"5":10.0,"6":30.0,"7":0,"8":0,"9":25.0},"2026-01-30":{"0":30.0,"1":30.0,"2":30.0,"3":30.0,"4":15.0,"5":10.0,"6":30.0,"7":0,"8":0,"9":25.0},"2026-01-31":{"0":30.0,"1":30.0,"2":30.0,"3":30.0,"4":10.0,"5":10.0,"6":30.0,"7":0,"8":0,"9":25.0},"2026-02-01":{"0":30.0,"1":30.0,"2":30.0,"3":30.0,"4":10.0,"5":10.0,"6":30.0,"7":0,"8":0,"9":25.0},"2026-02-02":{"0":30.0,"1":25.0,"2":30.0,"3":0,"4":10.0,"5":10.0,"6":30.0,"7":0,"8":0,"9":5.0},"2026-02-03":{"0":30.0,"1":20.0,"2":30.0,"3":0,"4":10.0,"5":5.0,"6":30.0,"7":0,"8":0,"9":5.0},"2026-02-04":{"0":0,"1":20.0,"2":30.0,"3":0,"4":10.0,"5":5.0,"6":30.0,"7":0,"8":0,"9":5.0},"2026-02-05":{"0":30.0,"1":40.0,"2":60.0,"3":30.0,"4":10.0,"5":5.0,"6":30.0,"7":30.0,"8":20.0,"9":5.0},"2026-02-06":{"0":30.0,"1":40.0,"2":30.0,"3":30.0,"4":10.0,"5":0,"6":0,"7":30.0,"8":20.0,"9":5.0},"2026-02-07":{"0":30.0,"1":35.0,"2":30.0,"3":30.0,"4":10.0,"5":0,"6":0,"7":30.0,"8":20.0,"9":5.0},"2026-02-08":{"0":30.0,"1":35.0,"2":30.0,"3":30.0,"4":10.0,"5":0,"6":0,"7":30.0,"8":20.0,"9":5.0},"2026-02-09":{"0":30.0,"1":30.0,"2":30.0,"3":30.0,"4":10.0,"5":0,"6":0,"7":30.0,"8":10.0,"9":5.0},"2026-02-10":{"0":30.0,"1":30.0,"2":30.0,"3":30.0,"4":10.0,"5":0,"6":0,"7":30.0,"8":10.0,"9":5.0},"2026-02-11":{"0":30.0,"1":30.0,"2":60.0,"3":30.0,"4":10.0,"5":20.0,"6":30.0,"7":30.0,"8":25.0,"9":5.0},"2026-02-12":{"0":60.0,"1":45.0,"2":60.0,"3":30.0,"4":10.0,"5":45.0,"6":30.0,"7":30.0,"8":25.0,"9":20.0},"2026-02-13":{"0":60.0,"1":45.0,"2":60.0,"3":30.0,"4":10.0,"5":45.0,"6":60.0,"7":30.0,"8":25.0,"9":20.0},"2026-02-14":{"0":60.0,"1":40.0,"2":60.0,"3":30.0,"4":10.0,"5":45.0,"6":60.0,"7":30.0,"8":25.0,"9":20.0},"2026-02-15":{"0":60.0,"1":40.0,"2":60.0,"3":30.0,"4":10.0,"5":40.0,"6":60.0,"7":30.0,"8":25.0,"9":20.0},"2026-02-16":{"0":60.0,"1":40.0,"2":60.0,"3":30.0,"4":10.0,"5":40.0,"6":60.0,"7":30.0,"8":25.0,"9":20.0},"2026-02-17":{"0":60.0,"1":35.0,"2":60.0,"3":30.0,"4":10.0,"5":35.0,"6":60.0,"7":30.0,"8":25.0,"9":20.0},"2026-02-18":{"0":60.0,"1":35.0,"2":60.0,"3":0,"4":10.0,"5":35.0,"6":60.0,"7":0,"8":10.0,"9":20.0},"2026-02-19":{"0":30.0,"1":35.0,"2":60.0,"3":0,"4":10.0,"5":35.0,"6":60.0,"7":0,"8":10.0,"9":20.0},"2026-02-20":{"0":30.0,"1":35.0,"2":60.0,"3":0,"4":10.0,"5":35.0,"6":60.0,"7":0,"8":10.0,"9":20.0},"2026-02-21":{"0":30.0,"1":30.0,"2":60.0,"3":0,"4":10.0,"5":35.0,"6":30.0,"7":0,"8":10.0,"9":20.0},"2026-02-22":{"0":30.0,"1":30.0,"2":30.0,"3":0,"4":10.0,"5":35.0,"6":30.0,"7":0,"8":10.0,"9":20.0},"2026-02-23":{"0":30.0,"1":30.0,"2":30.0,"3":0,"4":10.0,"5":30.0,"6":30.0,"7":0,"8":10.0,"9":15.0},"2026-02-24":{"0":30.0,"1":30.0,"2":30.0,"3":0,"4":5.0,"5":30.0,"6":30.0,"7":0,"8":10.0,"9":15.0},"2026-02-25":{"0":60.0,"1":25.0,"2":60.0,"3":30.0,"4":25.0,"5":30.0,"6":30.0,"7":0,"8":30.0,"9":15.0},"2026-02-26":{"0":60.0,"1":25.0,"2":60.0,"3":30.0,"4":25.0,"5":30.0,"6":30.0,"7":0,"8":30.0,"9":15.0},"2026-02-27":{"0":30.0,"1":20.0,"2":60.0,"3":30.0,"4":20.0,"5":25.0,"6":30.0,"7":0,"8":30.0,"9":15.0},"2026-02-28":{"0":30.0,"1":20.0,"2":60.0,"3":30.0,"4":20.0,"5":25.0,"6":30.0,"7":0,"8":30.0,"9":15.0},"2026-03-01":{"0":30.0,"1":20.0,"2":30.0,"3":30.0,"4":20.0,"5":25.0,"6":30.0,"7":0,"8":30.0,"9":5.0},"2026-03-02":{"0":30.0,"1":20.0,"2":30.0,"3":30.0,"4":20.0,"5":25.0,"6":30.0,"7":0,"8":15.0,"9":5.0},"2026-03-03":{"0":30.0,"1":15.0,"2":30.0,"3":30.0,"4":20.0,"5":20.0,"6":30.0,"7":0,"8":15.0,"9":5.0},"2026-03-04":{"0":60.0,"1":30.0,"2":90.0,"3":30.0,"4":20.0,"5":25.0,"6":30.0,"7":0,"8":15.0,"9":5.0},"2026-03-05":{"0":60.0,"1":30.0,"2":90.0,"3":30.0,"4":15.0,"5":25.0,"6":30.0,"7":0,"8":15.0,"9":5.0},"2026-03-06":{"0":60.0,"1":25.0,"2":90.0,"3":30.0,"4":15.0,"5":20.0,"6":30.0,"7":0,"8":15.0,"9":5.0},"2026-03-07":{"0":60.0,"1":25.0,"2":90.0,"3":30.0,"4":15.0,"5":20.0,"6":30.0,"7":0,"8":15.0,"9":5.0},"2026-03-08":{"0":60.0,"1":25.0,"2":90.0,"3":30.0,"4":15.0,"5":20.0,"6":30.0,"7":0,"8":15.0,"9":5.0},"2026-03-09":{"0":60.0,"1":25.0,"2":90.0,"3":30.0,"4":15.0,"5":20.0,"6":30.0,"7":0,"8":15.0,"9":5.0},"2026-03-10":{"0":60.0,"1":20.0,"2":60.0,"3":30.0,"4":15.0,"5":30.0,"6":60.0,"7":30.0,"8":20.0,"9":15.0},"2026-03-11":{"0":60.0,"1":20.0,"2":60.0,"3":30.0,"4":10.0,"5":30.0,"6":60.0,"7":30.0,"8":20.0,"9":12.5},"2026-03-12":{"0":60.0,"1":20.0,"2":60.0,"3":30.0,"4":10.0,"5":30.0,"6":60.0,"7":30.0,"8":20.0,"9":12.5},"2026-03-13":{"0":60.0,"1":15.0,"2":60.0,"3":30.0,"4":10.0,"5":30.0,"6":60.0,"7":30.0,"8":20.0,"9":2.5},"2026-03-14":{"0":30.0,"1":15.0,"2":60.0,"3":30.0,"4":10.0,"5":20.0,"6":30.0,"7":30.0,"8":20.0,"9":2.5},"2026-03-15":{"0":30.0,"1":15.0,"2":60.0,"3":30.0,"4":10.0,"5":20.0,"6":30.0,"7":30.0,"8":20.0,"9":2.5},"2026-03-16":{"0":30.0,"1":15.0,"2":60.0,"3":30.0,"4":10.0,"5":20.0,"6":30.0,"7":30.0,"8":20.0,"9":2.5},"2026-03-17":{"0":30.0,"1":10.0,"2":60.0,"3":30.0,"4":5.0,"5":20.0,"6":30.0,"7":30.0,"8":20.0,"9":2.5},"2026-03-18":{"0":60.0,"1":30.0,"2":90.0,"3":0,"4":5.0,"5":40.0,"6":60.0,"7":30.0,"8":20.0,"9":22.5},"2026-03-19":{"0":60.0,"1":25.0,"2":60.0,"3":0,"4":5.0,"5":35.0,"6":60.0,"7":30.0,"8":0,"9":22.5},"2026-03-20":{"0":30.0,"1":25.0,"2":60.0,"3":0,"4":5.0,"5":35.0,"6":60.0,"7":30.0,"8":0,"9":22.5},"2026-03-21":{"0":30.0,"1":25.0,"2":60.0,"3":0,"4":5.0,"5":30.0,"6":30.0,"7":30.0,"8":0,"9":22.5},"2026-03-22":{"0":30.0,"1":20.0,"2":60.0,"3":0,"4":5.0,"5":30.0,"6":30.0,"7":0,"8":0,"9":22.5},"2026-03-23":{"0":0,"1":20.0,"2":30.0,"3":0,"4":5.0,"5":25.0,"6":30.0,"7":0,"8":0,"9":22.5},"2026-03-24":{"0":0,"1":15.0,"2":30.0,"3":0,"4":0,"5":25.0,"6":30.0,"7":0,"8":0,"9":22.5},"2026-03-25":{"0":0,"1":15.0,"2":30.0,"3":0,"4":0,"5":25.0,"6":30.0,"7":0,"8":0,"9":2.5},"2026-03-26":{"0":90.0,"1":45.0,"2":90.0,"3":30.0,"4":20.0,"5":47.5,"6":90.0,"7":30.0,"8":20.0,"9":2.5},"2026-03-27":{"0":90.0,"1":45.0,"2":90.0,"3":30.0,"4":15.0,"5":47.5,"6":90.0,"7":30.0,"8":20.0,"9":2.5},"2026-03-28":{"0":90.0,"1":40.0,"2":90.0,"3":30.0,"4":15.0,"5":50.0,"6":60.0,"7":30.0,"8":20.0,"9":2.5},"2026-03-29":{"0":60.0,"1":40.0,"2":90.0,"3":30.0,"4":15.0,"5":45.0,"6":60.0,"7":30.0,"8":20.0,"9":2.5},"2026-03-30":{"0":60.0,"1":35.0,"2":60.0,"3":30.0,"4":15.0,"5":45.0,"6":60.0,"7":30.0,"8":20.0,"9":2.5},"2026-03-31":{"0":60.0,"1":35.0,"2":60.0,"3":30.0,"4":15.0,"5":45.0,"6":60.0,"7":30.0,"8":0,"9":2.5},"2026-04-01":{"0":60.0,"1":35.0,"2":60.0,"3":30.0,"4":10.0,"5":40.0,"6":60.0,"7":30.0,"8":0,"9":2.5},"2026-04-02":{"0":60.0,"1":35.0,"2":60.0,"3":30.0,"4":10.0,"5":40.0,"6":60.0,"7":30.0,"8":0,"9":2.5},"2026-04-03":{"0":60.0,"1":35.0,"2":60.0,"3":30.0,"4":10.0,"5":40.0,"6":60.0,"7":30.0,"8":0,"9":2.5},"2026-04-04":{"0":60.0,"1":35.0,"2":60.0,"3":30.0,"4":10.0,"5":40.0,"6":60.0,"7":30.0,"8":0,"9":2.5},"2026-04-06":{"0":60.0,"1":30.0,"2":60.0,"3":30.0,"4":10.0,"5":40.0,"6":60.0,"7":30.0,"8":0,"9":2.5},"2026-04-07":{"0":60.0,"1":30.0,"2":60.0,"3":0,"4":10.0,"5":35.0,"6":60.0,"7":30.0,"8":0,"9":2.5},"2026-04-08":{"0":30.0,"1":25.0,"2":60.0,"3":0,"4":10.0,"5":35.0,"6":60.0,"7":30.0,"8":0,"9":2.5},"2026-04-09":{"0":30.0,"1":25.0,"2":30.0,"3":0,"4":10.0,"5":35.0,"6":60.0,"7":30.0,"8":0,"9":2.5},"2026-04-10":{"0":30.0,"1":25.0,"2":30.0,"3":0,"4":10.0,"5":35.0,"6":60.0,"7":30.0,"8":0,"9":2.5},"2026-04-11":{"0":30.0,"1":20.0,"2":30.0,"3":0,"4":5.0,"5":30.0,"6":60.0,"7":0,"8":0,"9":2.5},"2026-04-12":{"0":30.0,"1":20.0,"2":30.0,"3":0,"4":5.0,"5":30.0,"6":60.0,"7":0,"8":0,"9":2.5},"2026-04-13":{"0":30.0,"1":20.0,"2":30.0,"3":0,"4":5.0,"5":30.0,"6":60.0,"7":0,"8":0,"9":2.5},"2026-04-14":{"0":60.0,"1":20.0,"2":60.0,"3":0,"4":5.0,"5":30.0,"6":30.0,"7":30.0,"8":20.0,"9":22.5},"2026-04-15":{"0":30.0,"1":15.0,"2":30.0,"3":0,"4":5.0,"5":25.0,"6":30.0,"7":30.0,"8":0,"9":2.5},"2026-04-16":{"0":30.0,"1":15.0,"2":30.0,"3":0,"4":5.0,"5":25.0,"6":30.0,"7":30.0,"8":0,"9":2.5},"2026-04-17":{"0":30.0,"1":10.0,"2":30.0,"3":0,"4":5.0,"5":20.0,"6":30.0,"7":30.0,"8":0,"9":2.5},"2026-04-18":{"0":30.0,"1":10.0,"2":30.0,"3":0,"4":5.0,"5":20.0,"6":30.0,"7":30.0,"8":0,"9":2.5},"2026-04-19":{"0":30.0,"1":10.0,"2":30.0,"3":0,"4":5.0,"5":20.0,"6":30.0,"7":30.0,"8":0,"9":2.5},"2026-04-20":{"0":30.0,"1":25.0,"2":60.0,"3":30.0,"4":25.0,"5":20.0,"6":30.0,"7":30.0,"8":20.0,"9":2.5},"2026-04-21":{"0":30.0,"1":25.0,"2":30.0,"3":30.0,"4":20.0,"5":15.0,"6":30.0,"7":30.0,"8":20.0,"9":2.5},"2026-04-22":{"0":30.0,"1":25.0,"2":30.0,"3":30.0,"4":20.0,"5":15.0,"6":30.0,"7":30.0,"8":20.0,"9":2.5},"2026-04-23":{"0":30.0,"1":25.0,"2":30.0,"3":30.0,"4":20.0,"5":15.0,"6":30.0,"7":30.0,"8":20.0,"9":2.5},"2026-04-24":{"0":60.0,"1":35.0,"2":60.0,"3":30.0,"4":20.0,"5":30.0,"6":60.0,"7":30.0,"8":20.0,"9":2.5},"2026-04-25":{"0":30.0,"1":35.0,"2":60.0,"3":30.0,"4":20.0,"5":30.0,"6":60.0,"7":30.0,"8":20.0,"9":2.5},"2026-04-26":{"0":30.0,"1":35.0,"2":60.0,"3":30.0,"4":20.0,"5":30.0,"6":60.0,"7":30.0,"8":20.0,"9":2.5},"2026-04-27":{"0":30.0,"1":30.0,"2":60.0,"3":0,"4":20.0,"5":30.0,"6":60.0,"7":30.0,"8":20.0,"9":2.5},"2026-04-28":{"0":30.0,"1":30.0,"2":30.0,"3":0,"4":20.0,"5":25.0,"6":60.0,"7":30.0,"8":20.0,"9":2.5},"2026-04-29":{"0":30.0,"1":30.0,"2":30.0,"3":0,"4":20.0,"5":25.0,"6":30.0,"7":30.0,"8":10.0,"9":2.5},"2026-04-30":{"0":30.0,"1":30.0,"2":30.0,"3":0,"4":20.0,"5":25.0,"6":30.0,"7":30.0,"8":10.0,"9":2.5},"2026-05-01":{"0":30.0,"1":25.0,"2":30.0,"3":0,"4":20.0,"5":25.0,"6":30.0,"7":30.0,"8":10.0,"9":2.5},"2026-05-02":{"0":30.0,"1":25.0,"2":30.0,"3":0,"4":20.0,"5":25.0,"6":30.0,"7":30.0,"8":10.0,"9":2.5},"2026-05-03":{"0":0,"1":25.0,"2":30.0,"3":0,"4":20.0,"5":25.0,"6":30.0,"7":30.0,"8":10.0,"9":2.5},"2026-05-04":{"0":0,"1":20.0,"2":0,"3":0,"4":20.0,"5":20.0,"6":30.0,"7":0,"8":10.0,"9":2.5},"2026-05-05":{"0":0,"1":20.0,"2":0,"3":0,"4":20.0,"5":20.0,"6":30.0,"7":0,"8":10.0,"9":2.5},"2026-05-06":{"0":0,"1":15.0,"2":0,"3":0,"4":20.0,"5":20.0,"6":30.0,"7":0,"8":10.0,"9":2.5},"2026-05-07":{"0":30.0,"1":40.0,"2":30.0,"3":30.0,"4":15.0,"5":20.0,"6":30.0,"7":30.0,"8":20.0,"9":12.5},"2026-05-08":{"0":30.0,"1":40.0,"2":30.0,"3":30.0,"4":15.0,"5":20.0,"6":30.0,"7":30.0,"8":20.0,"9":10.0},"2026-05-09":{"0":0,"1":35.0,"2":0,"3":30.0,"4":15.0,"5":20.0,"6":30.0,"7":30.0,"8":20.0,"9":10.0},"2026-05-10":{"0":0,"1":35.0,"2":0,"3":30.0,"4":15.0,"5":20.0,"6":30.0,"7":30.0,"8":5.0,"9":10.0},"2026-05-11":{"0":0,"1":35.0,"2":0,"3":30.0,"4":15.0,"5":20.0,"6":0,"7":30.0,"8":5.0,"9":10.0},"2026-05-12":{"0":60.0,"1":30.0,"2":60.0,"3":0,"4":15.0,"5":35.0,"6":0,"7":30.0,"8":5.0,"9":30.0},"2026-05-13":{"0":30.0,"1":30.0,"2":30.0,"3":0,"4":15.0,"5":35.0,"6":0,"7":30.0,"8":5.0,"9":20.0},"2026-05-14":{"0":60.0,"1":25.0,"2":60.0,"3":30.0,"4":15.0,"5":30.0,"6":30.0,"7":30.0,"8":5.0,"9":20.0},"2026-05-15":{"0":60.0,"1":25.0,"2":60.0,"3":30.0,"4":15.0,"5":20.0,"6":30.0,"7":30.0,"8":5.0,"9":20.0},"2026-05-16":{"0":30.0,"1":25.0,"2":60.0,"3":30.0,"4":10.0,"5":25.0,"6":30.0,"7":30.0,"8":5.0,"9":20.0},"2026-05-17":{"0":30.0,"1":20.0,"2":30.0,"3":30.0,"4":10.0,"5":25.0,"6":30.0,"7":30.0,"8":5.0,"9":20.0},"2026-05-18":{"0":30.0,"1":20.0,"2":30.0,"3":30.0,"4":10.0,"5":20.0,"6":5.0,"7":30.0,"8":5.0,"9":20.0},"2026-05-19":{"0":30.0,"1":15.0,"2":30.0,"3":30.0,"4":5.0,"5":20.0,"6":5.0,"7":30.0,"8":5.0,"9":20.0},"2026-05-20":{"0":60.0,"1":15.0,"2":60.0,"3":30.0,"4":5.0,"5":20.0,"6":25.0,"7":30.0,"8":20.0,"9":27.5},"2026-05-21":{"0":60.0,"1":15.0,"2":60.0,"3":30.0,"4":5.0,"5":15.0,"6":25.0,"7":30.0,"8":20.0,"9":27.5},"2026-05-22":{"0":90.0,"1":35.0,"2":120.0,"3":30.0,"4":5.0,"5":35.0,"6":45.0,"7":30.0,"8":20.0,"9":27.5},"2026-05-23":{"0":90.0,"1":35.0,"2":120.0,"3":30.0,"4":5.0,"5":35.0,"6":45.0,"7":30.0,"8":20.0,"9":27.5},"2026-05-24":{"0":90.0,"1":30.0,"2":120.0,"3":30.0,"4":5.0,"5":30.0,"6":45.0,"7":30.0,"8":20.0,"9":27.5},"2026-05-25":{"0":90.0,"1":30.0,"2":90.0,"3":30.0,"4":5.0,"5":30.0,"6":45.0,"7":30.0,"8":0,"9":27.5},"2026-05-26":{"0":60.0,"1":25.0,"2":90.0,"3":30.0,"4":5.0,"5":25.0,"6":35.0,"7":30.0,"8":0,"9":27.5},"2026-05-27":{"0":60.0,"1":25.0,"2":90.0,"3":0,"4":5.0,"5":25.0,"6":35.0,"7":0,"8":0,"9":27.5},"2026-05-28":{"0":60.0,"1":25.0,"2":90.0,"3":0,"4":5.0,"5":25.0,"6":15.0,"7":0,"8":0,"9":17.5},"2026-05-29":{"0":60.0,"1":20.0,"2":90.0,"3":0,"4":5.0,"5":20.0,"6":15.0,"7":0,"8":0,"9":17.5},"2026-05-30":{"0":60.0,"1":20.0,"2":90.0,"3":0,"4":0,"5":20.0,"6":15.0,"7":0,"8":0,"9":17.5},"2026-05-31":{"0":60.0,"1":20.0,"2":60.0,"3":0,"4":0,"5":20.0,"6":15.0,"7":0,"8":0,"9":17.5},"2026-06-01":{"0":60.0,"1":35.0,"2":60.0,"3":30.0,"4":20.0,"5":45.0,"6":45.0,"7":0,"8":20.0,"9":17.5},"2026-06-02":{"0":60.0,"1":35.0,"2":60.0,"3":30.0,"4":20.0,"5":40.0,"6":30.0,"7":0,"8":20.0,"9":17.5},"2026-06-03":{"0":90.0,"1":30.0,"2":90.0,"3":30.0,"4":15.0,"5":55.0,"6":60.0,"7":30.0,"8":20.0,"9":22.5},"2026-06-04":{"0":90.0,"1":30.0,"2":60.0,"3":30.0,"4":15.0,"5":55.0,"6":60.0,"7":30.0,"8":20.0,"9":22.5},"2026-06-05":{"0":90.0,"1":30.0,"2":60.0,"3":30.0,"4":15.0,"5":50.0,"6":60.0,"7":30.0,"8":20.0,"9":25.0},"2026-06-06":{"0":90.0,"1":30.0,"2":60.0,"3":30.0,"4":15.0,"5":50.0,"6":55.0,"7":30.0,"8":20.0,"9":22.5},"2026-06-07":{"0":60.0,"1":25.0,"2":60.0,"3":30.0,"4":15.0,"5":45.0,"6":50.0,"7":0,"8":5.0,"9":22.5},"2026-06-08":{"0":60.0,"1":25.0,"2":60.0,"3":30.0,"4":15.0,"5":45.0,"6":25.0,"7":0,"8":5.0,"9":22.5},"2026-06-09":{"0":60.0,"1":20.0,"2":60.0,"3":0,"4":15.0,"5":45.0,"6":25.0,"7":0,"8":5.0,"9":22.5},"2026-06-10":{"0":90.0,"1":20.0,"2":60.0,"3":0,"4":15.0,"5":40.0,"6":55.0,"7":30.0,"8":20.0,"9":22.5},"2026-06-11":{"0":60.0,"1":20.0,"2":60.0,"3":0,"4":15.0,"5":40.0,"6":55.0,"7":30.0,"8":20.0,"9":22.5},"2026-06-12":{"0":60.0,"1":20.0,"2":60.0,"3":0,"4":10.0,"5":35.0,"6":55.0,"7":30.0,"8":20.0,"9":17.5},"2026-06-13":{"0":60.0,"1":15.0,"2":60.0,"3":0,"4":10.0,"5":35.0,"6":30.0,"7":30.0,"8":20.0,"9":17.5},"2026-06-14":{"0":60.0,"1":15.0,"2":60.0,"3":0,"4":10.0,"5":35.0,"6":30.0,"7":30.0,"8":20.0,"9":17.5},"2026-06-15":{"0":60.0,"1":10.0,"2":60.0,"3":0,"4":10.0,"5":30.0,"6":30.0,"7":30.0,"8":20.0,"9":2.5},"2026-06-16":{"0":30.0,"1":10.0,"2":30.0,"3":0,"4":10.0,"5":30.0,"6":30.0,"7":30.0,"8":20.0,"9":2.5},"2026-06-17":{"0":90.0,"1":30.0,"2":90.0,"3":30.0,"4":10.0,"5":45.0,"6":60.0,"7":60.0,"8":20.0,"9":22.5},"2026-06-18":{"0":90.0,"1":25.0,"2":90.0,"3":30.0,"4":5.0,"5":45.0,"6":50.0,"7":60.0,"8":20.0,"9":22.5},"2026-06-19":{"0":90.0,"1":25.0,"2":90.0,"3":30.0,"4":5.0,"5":40.0,"6":50.0,"7":30.0,"8":20.0,"9":22.5},"2026-06-20":{"0":90.0,"1":20.0,"2":90.0,"3":30.0,"4":5.0,"5":35.0,"6":50.0,"7":30.0,"8":20.0,"9":22.5},"2026-06-21":{"0":90.0,"1":20.0,"2":90.0,"3":30.0,"4":5.0,"5":35.0,"6":50.0,"7":30.0,"8":10.0,"9":22.5},"2026-06-22":{"0":60.0,"1":20.0,"2":60.0,"3":30.0,"4":5.0,"5":35.0,"6":40.0,"7":30.0,"8":10.0,"9":22.5},"2026-06-23":{"0":60.0,"1":15.0,"2":60.0,"3":30.0,"4":5.0,"5":30.0,"6":40.0,"7":30.0,"8":10.0,"9":12.5},"2026-06-24":{"0":60.0,"1":15.0,"2":60.0,"3":30.0,"4":5.0,"5":30.0,"6":40.0,"7":30.0,"8":10.0,"9":12.5},"2026-06-25":{"0":90.0,"1":35.0,"2":60.0,"3":0,"4":15.0,"5":50.0,"6":60.0,"7":60.0,"8":25.0,"9":32.5},"2026-06-26":{"0":90.0,"1":35.0,"2":60.0,"3":0,"4":10.0,"5":45.0,"6":60.0,"7":60.0,"8":25.0,"9":32.5},"2026-06-27":{"0":90.0,"1":30.0,"2":60.0,"3":0,"4":10.0,"5":45.0,"6":60.0,"7":60.0,"8":25.0,"9":32.5},"2026-06-28":{"0":90.0,"1":30.0,"2":60.0,"3":0,"4":10.0,"5":45.0,"6":55.0,"7":30.0,"8":15.0,"9":32.5},"2026-06-29":{"0":60.0,"1":25.0,"2":30.0,"3":0,"4":10.0,"5":40.0,"6":45.0,"7":30.0,"8":15.0,"9":32.5},"2026-06-30":{"0":60.0,"1":25.0,"2":30.0,"3":0,"4":10.0,"5":35.0,"6":45.0,"7":30.0,"8":15.0,"9":32.5},"2026-07-01":{"0":60.0,"1":20.0,"2":30.0,"3":0,"4":10.0,"5":30.0,"6":45.0,"7":30.0,"8":15.0,"9":25.0},"2026-07-02":{"0":120.0,"1":50.0,"2":60.0,"3":30.0,"4":10.0,"5":50.0,"6":65.0,"7":60.0,"8":15.0,"9":25.0},"2026-07-03":{"0":90.0,"1":50.0,"2":60.0,"3":30.0,"4":10.0,"5":50.0,"6":65.0,"7":60.0,"8":15.0,"9":25.0},"2026-07-04":{"0":90.0,"1":50.0,"2":60.0,"3":30.0,"4":10.0,"5":45.0,"6":65.0,"7":60.0,"8":15.0,"9":25.0},"2026-07-05":{"0":90.0,"1":45.0,"2":60.0,"3":30.0,"4":10.0,"5":45.0,"6":65.0,"7":60.0,"8":15.0,"9":22.5},"2026-07-06":{"0":90.0,"1":45.0,"2":60.0,"3":30.0,"4":10.0,"5":45.0,"6":55.0,"7":60.0,"8":10.0,"9":22.5},"2026-07-07":{"0":60.0,"1":45.0,"2":60.0,"3":30.0,"4":10.0,"5":40.0,"6":55.0,"7":60.0,"8":10.0,"9":17.5},"2026-07-08":{"0":60.0,"1":40.0,"2":30.0,"3":30.0,"4":5.0,"5":40.0,"6":55.0,"7":60.0,"8":10.0,"9":17.5},"2026-07-09":{"0":90.0,"1":40.0,"2":60.0,"3":60.0,"4":5.0,"5":55.0,"6":50.0,"7":60.0,"8":5.0,"9":37.5},"2026-07-10":{"0":90.0,"1":35.0,"2":60.0,"3":60.0,"4":5.0,"5":55.0,"6":45.0,"7":60.0,"8":25.0,"9":32.5}},
+    ohqty:{"2025-12-23":{"0":2.0,"1":10.0,"2":2.0,"3":0.0,"4":2.0,"5":14.0,"6":0.0,"7":0.0,"8":0.0,"9":14.0},"2025-12-24":{"0":2.0,"1":10.0,"2":2.0,"3":0.0,"4":2.0,"5":12.0,"6":0.0,"7":0.0,"8":0.0,"9":4.0},"2025-12-26":{"0":2.0,"1":10.0,"2":2.0,"3":0.0,"4":2.0,"5":12.0,"6":0.0,"7":0.0,"8":0.0,"9":4.0},"2025-12-27":{"0":1.0,"1":10.0,"2":2.0,"3":0.0,"4":2.0,"5":12.0,"6":0.0,"7":0.0,"8":0.0,"9":4.0},"2025-12-28":{"0":1.0,"1":10.0,"2":2.0,"3":0.0,"4":2.0,"5":12.0,"6":0.0,"7":0.0,"8":0.0,"9":4.0},"2025-12-29":{"0":3.0,"1":10.0,"2":3.0,"3":1.0,"4":2.0,"5":10.0,"6":1.0,"7":0.0,"8":8.0,"9":4.0},"2025-12-30":{"0":3.0,"1":8.0,"2":2.0,"3":1.0,"4":2.0,"5":10.0,"6":1.0,"7":0.0,"8":8.0,"9":4.0},"2025-12-31":{"0":3.0,"1":8.0,"2":2.0,"3":1.0,"4":2.0,"5":10.0,"6":1.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-01":{"0":3.0,"1":8.0,"2":2.0,"3":1.0,"4":2.0,"5":10.0,"6":1.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-02":{"0":3.0,"1":8.0,"2":2.0,"3":1.0,"4":2.0,"5":10.0,"6":1.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-03":{"0":3.0,"1":8.0,"2":2.0,"3":1.0,"4":2.0,"5":10.0,"6":1.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-04":{"0":3.0,"1":8.0,"2":2.0,"3":1.0,"4":2.0,"5":10.0,"6":1.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-05":{"0":3.0,"1":6.0,"2":2.0,"3":1.0,"4":0.0,"5":8.0,"6":1.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-06":{"0":2.0,"1":6.0,"2":2.0,"3":1.0,"4":0.0,"5":8.0,"6":1.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-07":{"0":2.0,"1":4.0,"2":1.0,"3":0.0,"4":0.0,"5":8.0,"6":1.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-08":{"0":2.0,"1":4.0,"2":1.0,"3":0.0,"4":0.0,"5":8.0,"6":1.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-09":{"0":2.0,"1":4.0,"2":1.0,"3":0.0,"4":0.0,"5":8.0,"6":1.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-10":{"0":2.0,"1":4.0,"2":1.0,"3":0.0,"4":0.0,"5":6.0,"6":0.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-11":{"0":2.0,"1":2.0,"2":1.0,"3":0.0,"4":0.0,"5":6.0,"6":0.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-12":{"0":2.0,"1":2.0,"2":1.0,"3":0.0,"4":0.0,"5":6.0,"6":0.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-13":{"0":2.0,"1":2.0,"2":1.0,"3":0.0,"4":0.0,"5":6.0,"6":0.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-14":{"0":2.0,"1":2.0,"2":1.0,"3":0.0,"4":0.0,"5":6.0,"6":1.0,"7":0.0,"8":0.0,"9":4.0},"2026-01-15":{"0":2.0,"1":6.0,"2":2.0,"3":1.0,"4":0.0,"5":6.0,"6":1.0,"7":0.0,"8":6.0,"9":10.0},"2026-01-16":{"0":2.0,"1":6.0,"2":2.0,"3":1.0,"4":0.0,"5":6.0,"6":1.0,"7":0.0,"8":0.0,"9":10.0},"2026-01-17":{"0":2.0,"1":4.0,"2":1.0,"3":1.0,"4":0.0,"5":6.0,"6":1.0,"7":0.0,"8":0.0,"9":6.0},"2026-01-18":{"0":2.0,"1":4.0,"2":1.0,"3":1.0,"4":0.0,"5":6.0,"6":1.0,"7":0.0,"8":0.0,"9":6.0},"2026-01-19":{"0":2.0,"1":16.0,"2":2.0,"3":1.0,"4":8.0,"5":6.0,"6":1.0,"7":1.0,"8":12.0,"9":14.0},"2026-01-20":{"0":2.0,"1":16.0,"2":2.0,"3":1.0,"4":6.0,"5":6.0,"6":1.0,"7":1.0,"8":12.0,"9":14.0},"2026-01-21":{"0":2.0,"1":16.0,"2":2.0,"3":1.0,"4":6.0,"5":4.0,"6":1.0,"7":1.0,"8":12.0,"9":14.0},"2026-01-22":{"0":2.0,"1":16.0,"2":2.0,"3":1.0,"4":6.0,"5":4.0,"6":1.0,"7":1.0,"8":12.0,"9":14.0},"2026-01-23":{"0":2.0,"1":16.0,"2":2.0,"3":1.0,"4":6.0,"5":4.0,"6":1.0,"7":0.0,"8":12.0,"9":14.0},"2026-01-24":{"0":2.0,"1":16.0,"2":2.0,"3":1.0,"4":6.0,"5":4.0,"6":1.0,"7":0.0,"8":8.0,"9":10.0},"2026-01-25":{"0":2.0,"1":16.0,"2":2.0,"3":1.0,"4":6.0,"5":4.0,"6":1.0,"7":0.0,"8":8.0,"9":10.0},"2026-01-26":{"0":2.0,"1":16.0,"2":2.0,"3":1.0,"4":6.0,"5":4.0,"6":1.0,"7":0.0,"8":8.0,"9":10.0},"2026-01-27":{"0":2.0,"1":14.0,"2":2.0,"3":1.0,"4":6.0,"5":4.0,"6":1.0,"7":0.0,"8":8.0,"9":10.0},"2026-01-28":{"0":1.0,"1":14.0,"2":2.0,"3":1.0,"4":6.0,"5":4.0,"6":1.0,"7":0.0,"8":8.0,"9":10.0},"2026-01-29":{"0":1.0,"1":12.0,"2":2.0,"3":1.0,"4":6.0,"5":4.0,"6":1.0,"7":0.0,"8":0.0,"9":10.0},"2026-01-30":{"0":1.0,"1":12.0,"2":1.0,"3":1.0,"4":6.0,"5":4.0,"6":1.0,"7":0.0,"8":0.0,"9":10.0},"2026-01-31":{"0":1.0,"1":12.0,"2":1.0,"3":1.0,"4":4.0,"5":4.0,"6":1.0,"7":0.0,"8":0.0,"9":10.0},"2026-02-01":{"0":1.0,"1":12.0,"2":1.0,"3":1.0,"4":4.0,"5":4.0,"6":1.0,"7":0.0,"8":0.0,"9":10.0},"2026-02-02":{"0":1.0,"1":10.0,"2":1.0,"3":0.0,"4":4.0,"5":4.0,"6":1.0,"7":0.0,"8":0.0,"9":2.0},"2026-02-03":{"0":1.0,"1":8.0,"2":1.0,"3":0.0,"4":4.0,"5":2.0,"6":1.0,"7":0.0,"8":0.0,"9":2.0},"2026-02-04":{"0":0.0,"1":8.0,"2":1.0,"3":0.0,"4":4.0,"5":2.0,"6":1.0,"7":0.0,"8":0.0,"9":2.0},"2026-02-05":{"0":1.0,"1":16.0,"2":2.0,"3":1.0,"4":4.0,"5":2.0,"6":1.0,"7":1.0,"8":8.0,"9":2.0},"2026-02-06":{"0":1.0,"1":16.0,"2":1.0,"3":1.0,"4":4.0,"5":0.0,"6":0.0,"7":1.0,"8":8.0,"9":2.0},"2026-02-07":{"0":1.0,"1":14.0,"2":1.0,"3":1.0,"4":4.0,"5":0.0,"6":0.0,"7":1.0,"8":8.0,"9":2.0},"2026-02-08":{"0":1.0,"1":14.0,"2":1.0,"3":1.0,"4":4.0,"5":0.0,"6":0.0,"7":1.0,"8":8.0,"9":2.0},"2026-02-09":{"0":1.0,"1":12.0,"2":1.0,"3":1.0,"4":4.0,"5":0.0,"6":0.0,"7":1.0,"8":4.0,"9":2.0},"2026-02-10":{"0":1.0,"1":12.0,"2":1.0,"3":1.0,"4":4.0,"5":0.0,"6":0.0,"7":1.0,"8":4.0,"9":2.0},"2026-02-11":{"0":1.0,"1":12.0,"2":2.0,"3":1.0,"4":4.0,"5":8.0,"6":1.0,"7":1.0,"8":10.0,"9":2.0},"2026-02-12":{"0":2.0,"1":18.0,"2":2.0,"3":1.0,"4":4.0,"5":18.0,"6":1.0,"7":1.0,"8":10.0,"9":8.0},"2026-02-13":{"0":2.0,"1":18.0,"2":2.0,"3":1.0,"4":4.0,"5":18.0,"6":2.0,"7":1.0,"8":10.0,"9":8.0},"2026-02-14":{"0":2.0,"1":16.0,"2":2.0,"3":1.0,"4":4.0,"5":18.0,"6":2.0,"7":1.0,"8":10.0,"9":8.0},"2026-02-15":{"0":2.0,"1":16.0,"2":2.0,"3":1.0,"4":4.0,"5":16.0,"6":2.0,"7":1.0,"8":10.0,"9":8.0},"2026-02-16":{"0":2.0,"1":16.0,"2":2.0,"3":1.0,"4":4.0,"5":16.0,"6":2.0,"7":1.0,"8":10.0,"9":8.0},"2026-02-17":{"0":2.0,"1":14.0,"2":2.0,"3":1.0,"4":4.0,"5":14.0,"6":2.0,"7":1.0,"8":10.0,"9":8.0},"2026-02-18":{"0":2.0,"1":14.0,"2":2.0,"3":0.0,"4":4.0,"5":14.0,"6":2.0,"7":0.0,"8":4.0,"9":8.0},"2026-02-19":{"0":1.0,"1":14.0,"2":2.0,"3":0.0,"4":4.0,"5":14.0,"6":2.0,"7":0.0,"8":4.0,"9":8.0},"2026-02-20":{"0":1.0,"1":14.0,"2":2.0,"3":0.0,"4":4.0,"5":14.0,"6":2.0,"7":0.0,"8":4.0,"9":8.0},"2026-02-21":{"0":1.0,"1":12.0,"2":2.0,"3":0.0,"4":4.0,"5":14.0,"6":1.0,"7":0.0,"8":4.0,"9":8.0},"2026-02-22":{"0":1.0,"1":12.0,"2":1.0,"3":0.0,"4":4.0,"5":14.0,"6":1.0,"7":0.0,"8":4.0,"9":8.0},"2026-02-23":{"0":1.0,"1":12.0,"2":1.0,"3":0.0,"4":4.0,"5":12.0,"6":1.0,"7":0.0,"8":4.0,"9":6.0},"2026-02-24":{"0":1.0,"1":12.0,"2":1.0,"3":0.0,"4":2.0,"5":12.0,"6":1.0,"7":0.0,"8":4.0,"9":6.0},"2026-02-25":{"0":2.0,"1":10.0,"2":2.0,"3":1.0,"4":10.0,"5":12.0,"6":1.0,"7":0.0,"8":12.0,"9":6.0},"2026-02-26":{"0":2.0,"1":10.0,"2":2.0,"3":1.0,"4":10.0,"5":12.0,"6":1.0,"7":0.0,"8":12.0,"9":6.0},"2026-02-27":{"0":1.0,"1":8.0,"2":2.0,"3":1.0,"4":8.0,"5":10.0,"6":1.0,"7":0.0,"8":12.0,"9":6.0},"2026-02-28":{"0":1.0,"1":8.0,"2":2.0,"3":1.0,"4":8.0,"5":10.0,"6":1.0,"7":0.0,"8":12.0,"9":6.0},"2026-03-01":{"0":1.0,"1":8.0,"2":1.0,"3":1.0,"4":8.0,"5":10.0,"6":1.0,"7":0.0,"8":12.0,"9":2.0},"2026-03-02":{"0":1.0,"1":8.0,"2":1.0,"3":1.0,"4":8.0,"5":10.0,"6":1.0,"7":0.0,"8":6.0,"9":2.0},"2026-03-03":{"0":1.0,"1":6.0,"2":1.0,"3":1.0,"4":8.0,"5":8.0,"6":1.0,"7":0.0,"8":6.0,"9":2.0},"2026-03-04":{"0":2.0,"1":12.0,"2":3.0,"3":1.0,"4":8.0,"5":10.0,"6":1.0,"7":0.0,"8":6.0,"9":2.0},"2026-03-05":{"0":2.0,"1":12.0,"2":3.0,"3":1.0,"4":6.0,"5":10.0,"6":1.0,"7":0.0,"8":6.0,"9":2.0},"2026-03-06":{"0":2.0,"1":10.0,"2":3.0,"3":1.0,"4":6.0,"5":8.0,"6":1.0,"7":0.0,"8":6.0,"9":2.0},"2026-03-07":{"0":2.0,"1":10.0,"2":3.0,"3":1.0,"4":6.0,"5":8.0,"6":1.0,"7":0.0,"8":6.0,"9":2.0},"2026-03-08":{"0":2.0,"1":10.0,"2":3.0,"3":1.0,"4":6.0,"5":8.0,"6":1.0,"7":0.0,"8":6.0,"9":2.0},"2026-03-09":{"0":2.0,"1":10.0,"2":3.0,"3":1.0,"4":6.0,"5":8.0,"6":1.0,"7":0.0,"8":6.0,"9":2.0},"2026-03-10":{"0":2.0,"1":8.0,"2":2.0,"3":1.0,"4":6.0,"5":12.0,"6":2.0,"7":1.0,"8":8.0,"9":6.0},"2026-03-11":{"0":2.0,"1":8.0,"2":2.0,"3":1.0,"4":4.0,"5":12.0,"6":2.0,"7":1.0,"8":8.0,"9":5.0},"2026-03-12":{"0":2.0,"1":8.0,"2":2.0,"3":1.0,"4":4.0,"5":12.0,"6":2.0,"7":1.0,"8":8.0,"9":5.0},"2026-03-13":{"0":2.0,"1":6.0,"2":2.0,"3":1.0,"4":4.0,"5":12.0,"6":2.0,"7":1.0,"8":8.0,"9":1.0},"2026-03-14":{"0":1.0,"1":6.0,"2":2.0,"3":1.0,"4":4.0,"5":8.0,"6":1.0,"7":1.0,"8":8.0,"9":1.0},"2026-03-15":{"0":1.0,"1":6.0,"2":2.0,"3":1.0,"4":4.0,"5":8.0,"6":1.0,"7":1.0,"8":8.0,"9":1.0},"2026-03-16":{"0":1.0,"1":6.0,"2":2.0,"3":1.0,"4":4.0,"5":8.0,"6":1.0,"7":1.0,"8":8.0,"9":1.0},"2026-03-17":{"0":1.0,"1":4.0,"2":2.0,"3":1.0,"4":2.0,"5":8.0,"6":1.0,"7":1.0,"8":8.0,"9":1.0},"2026-03-18":{"0":2.0,"1":12.0,"2":3.0,"3":0.0,"4":2.0,"5":16.0,"6":2.0,"7":1.0,"8":8.0,"9":9.0},"2026-03-19":{"0":2.0,"1":10.0,"2":2.0,"3":0.0,"4":2.0,"5":14.0,"6":2.0,"7":1.0,"8":0.0,"9":9.0},"2026-03-20":{"0":1.0,"1":10.0,"2":2.0,"3":0.0,"4":2.0,"5":14.0,"6":2.0,"7":1.0,"8":0.0,"9":9.0},"2026-03-21":{"0":1.0,"1":10.0,"2":2.0,"3":0.0,"4":2.0,"5":12.0,"6":1.0,"7":1.0,"8":0.0,"9":9.0},"2026-03-22":{"0":1.0,"1":8.0,"2":2.0,"3":0.0,"4":2.0,"5":12.0,"6":1.0,"7":0.0,"8":0.0,"9":9.0},"2026-03-23":{"0":0.0,"1":8.0,"2":1.0,"3":0.0,"4":2.0,"5":10.0,"6":1.0,"7":0.0,"8":0.0,"9":9.0},"2026-03-24":{"0":0.0,"1":6.0,"2":1.0,"3":0.0,"4":0.0,"5":10.0,"6":1.0,"7":0.0,"8":0.0,"9":9.0},"2026-03-25":{"0":0.0,"1":6.0,"2":1.0,"3":0.0,"4":0.0,"5":10.0,"6":1.0,"7":0.0,"8":0.0,"9":1.0},"2026-03-26":{"0":3.0,"1":18.0,"2":3.0,"3":1.0,"4":8.0,"5":19.0,"6":3.0,"7":1.0,"8":8.0,"9":1.0},"2026-03-27":{"0":3.0,"1":18.0,"2":3.0,"3":1.0,"4":6.0,"5":19.0,"6":3.0,"7":1.0,"8":8.0,"9":1.0},"2026-03-28":{"0":3.0,"1":16.0,"2":3.0,"3":1.0,"4":6.0,"5":20.0,"6":2.0,"7":1.0,"8":8.0,"9":1.0},"2026-03-29":{"0":2.0,"1":16.0,"2":3.0,"3":1.0,"4":6.0,"5":18.0,"6":2.0,"7":1.0,"8":8.0,"9":1.0},"2026-03-30":{"0":2.0,"1":14.0,"2":2.0,"3":1.0,"4":6.0,"5":18.0,"6":2.0,"7":1.0,"8":8.0,"9":1.0},"2026-03-31":{"0":2.0,"1":14.0,"2":2.0,"3":1.0,"4":6.0,"5":18.0,"6":2.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-01":{"0":2.0,"1":14.0,"2":2.0,"3":1.0,"4":4.0,"5":16.0,"6":2.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-02":{"0":2.0,"1":14.0,"2":2.0,"3":1.0,"4":4.0,"5":16.0,"6":2.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-03":{"0":2.0,"1":14.0,"2":2.0,"3":1.0,"4":4.0,"5":16.0,"6":2.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-04":{"0":2.0,"1":14.0,"2":2.0,"3":1.0,"4":4.0,"5":16.0,"6":2.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-06":{"0":2.0,"1":12.0,"2":2.0,"3":1.0,"4":4.0,"5":16.0,"6":2.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-07":{"0":2.0,"1":12.0,"2":2.0,"3":0.0,"4":4.0,"5":14.0,"6":2.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-08":{"0":1.0,"1":10.0,"2":2.0,"3":0.0,"4":4.0,"5":14.0,"6":2.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-09":{"0":1.0,"1":10.0,"2":1.0,"3":0.0,"4":4.0,"5":14.0,"6":2.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-10":{"0":1.0,"1":10.0,"2":1.0,"3":0.0,"4":4.0,"5":14.0,"6":2.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-11":{"0":1.0,"1":8.0,"2":1.0,"3":0.0,"4":2.0,"5":12.0,"6":2.0,"7":0.0,"8":0.0,"9":1.0},"2026-04-12":{"0":1.0,"1":8.0,"2":1.0,"3":0.0,"4":2.0,"5":12.0,"6":2.0,"7":0.0,"8":0.0,"9":1.0},"2026-04-13":{"0":1.0,"1":8.0,"2":1.0,"3":0.0,"4":2.0,"5":12.0,"6":2.0,"7":0.0,"8":0.0,"9":1.0},"2026-04-14":{"0":2.0,"1":8.0,"2":2.0,"3":0.0,"4":2.0,"5":12.0,"6":1.0,"7":1.0,"8":8.0,"9":9.0},"2026-04-15":{"0":1.0,"1":6.0,"2":1.0,"3":0.0,"4":2.0,"5":10.0,"6":1.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-16":{"0":1.0,"1":6.0,"2":1.0,"3":0.0,"4":2.0,"5":10.0,"6":1.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-17":{"0":1.0,"1":4.0,"2":1.0,"3":0.0,"4":2.0,"5":8.0,"6":1.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-18":{"0":1.0,"1":4.0,"2":1.0,"3":0.0,"4":2.0,"5":8.0,"6":1.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-19":{"0":1.0,"1":4.0,"2":1.0,"3":0.0,"4":2.0,"5":8.0,"6":1.0,"7":1.0,"8":0.0,"9":1.0},"2026-04-20":{"0":1.0,"1":10.0,"2":2.0,"3":1.0,"4":10.0,"5":8.0,"6":1.0,"7":1.0,"8":8.0,"9":1.0},"2026-04-21":{"0":1.0,"1":10.0,"2":1.0,"3":1.0,"4":8.0,"5":6.0,"6":1.0,"7":1.0,"8":8.0,"9":1.0},"2026-04-22":{"0":1.0,"1":10.0,"2":1.0,"3":1.0,"4":8.0,"5":6.0,"6":1.0,"7":1.0,"8":8.0,"9":1.0},"2026-04-23":{"0":1.0,"1":10.0,"2":1.0,"3":1.0,"4":8.0,"5":6.0,"6":1.0,"7":1.0,"8":8.0,"9":1.0},"2026-04-24":{"0":2.0,"1":14.0,"2":2.0,"3":1.0,"4":8.0,"5":12.0,"6":2.0,"7":1.0,"8":8.0,"9":1.0},"2026-04-25":{"0":1.0,"1":1.0,"2":2.0,"3":1.0,"4":8.0,"5":12.0,"6":2.0,"7":1.0,"8":8.0,"9":1.0},"2026-04-26":{"0":1.0,"1":14.0,"2":2.0,"3":1.0,"4":8.0,"5":12.0,"6":2.0,"7":1.0,"8":8.0,"9":1.0},"2026-04-27":{"0":1.0,"1":12.0,"2":2.0,"3":0.0,"4":8.0,"5":12.0,"6":2.0,"7":1.0,"8":8.0,"9":1.0},"2026-04-28":{"0":1.0,"1":12.0,"2":1.0,"3":0.0,"4":8.0,"5":10.0,"6":2.0,"7":1.0,"8":8.0,"9":1.0},"2026-04-29":{"0":1.0,"1":12.0,"2":1.0,"3":0.0,"4":8.0,"5":10.0,"6":1.0,"7":1.0,"8":4.0,"9":1.0},"2026-04-30":{"0":1.0,"1":12.0,"2":1.0,"3":0.0,"4":8.0,"5":10.0,"6":1.0,"7":1.0,"8":4.0,"9":1.0},"2026-05-01":{"0":1.0,"1":10.0,"2":1.0,"3":0.0,"4":8.0,"5":10.0,"6":1.0,"7":1.0,"8":4.0,"9":1.0},"2026-05-02":{"0":1.0,"1":10.0,"2":1.0,"3":0.0,"4":8.0,"5":10.0,"6":1.0,"7":1.0,"8":4.0,"9":1.0},"2026-05-03":{"0":0.0,"1":10.0,"2":1.0,"3":0.0,"4":8.0,"5":10.0,"6":1.0,"7":1.0,"8":4.0,"9":1.0},"2026-05-04":{"0":0.0,"1":8.0,"2":0.0,"3":0.0,"4":8.0,"5":8.0,"6":1.0,"7":0.0,"8":4.0,"9":1.0},"2026-05-05":{"0":0.0,"1":8.0,"2":0.0,"3":0.0,"4":8.0,"5":8.0,"6":1.0,"7":0.0,"8":4.0,"9":1.0},"2026-05-06":{"0":0.0,"1":6.0,"2":0.0,"3":0.0,"4":8.0,"5":8.0,"6":1.0,"7":0.0,"8":4.0,"9":1.0},"2026-05-07":{"0":1.0,"1":16.0,"2":1.0,"3":1.0,"4":6.0,"5":8.0,"6":1.0,"7":1.0,"8":8.0,"9":5.0},"2026-05-08":{"0":1.0,"1":16.0,"2":1.0,"3":1.0,"4":6.0,"5":8.0,"6":1.0,"7":1.0,"8":8.0,"9":4.0},"2026-05-09":{"0":0.0,"1":14.0,"2":0.0,"3":1.0,"4":6.0,"5":8.0,"6":1.0,"7":1.0,"8":8.0,"9":4.0},"2026-05-10":{"0":0.0,"1":14.0,"2":0.0,"3":1.0,"4":6.0,"5":8.0,"6":1.0,"7":1.0,"8":2.0,"9":4.0},"2026-05-11":{"0":0.0,"1":14.0,"2":0.0,"3":1.0,"4":6.0,"5":8.0,"6":0.0,"7":1.0,"8":2.0,"9":4.0},"2026-05-12":{"0":2.0,"1":12.0,"2":2.0,"3":0.0,"4":6.0,"5":14.0,"6":0.0,"7":1.0,"8":2.0,"9":12.0},"2026-05-13":{"0":1.0,"1":12.0,"2":1.0,"3":0.0,"4":6.0,"5":14.0,"6":0.0,"7":1.0,"8":2.0,"9":8.0},"2026-05-14":{"0":2.0,"1":10.0,"2":2.0,"3":1.0,"4":6.0,"5":12.0,"6":12.0,"7":1.0,"8":2.0,"9":8.0},"2026-05-15":{"0":2.0,"1":10.0,"2":2.0,"3":1.0,"4":6.0,"5":8.0,"6":16.0,"7":1.0,"8":2.0,"9":8.0},"2026-05-16":{"0":1.0,"1":10.0,"2":2.0,"3":1.0,"4":4.0,"5":10.0,"6":12.0,"7":1.0,"8":2.0,"9":8.0},"2026-05-17":{"0":1.0,"1":8.0,"2":1.0,"3":1.0,"4":4.0,"5":10.0,"6":12.0,"7":1.0,"8":2.0,"9":8.0},"2026-05-18":{"0":1.0,"1":8.0,"2":1.0,"3":1.0,"4":4.0,"5":8.0,"6":2.0,"7":1.0,"8":2.0,"9":8.0},"2026-05-19":{"0":1.0,"1":6.0,"2":1.0,"3":1.0,"4":2.0,"5":8.0,"6":2.0,"7":1.0,"8":2.0,"9":8.0},"2026-05-20":{"0":2.0,"1":6.0,"2":2.0,"3":1.0,"4":2.0,"5":8.0,"6":10.0,"7":1.0,"8":8.0,"9":11.0},"2026-05-21":{"0":2.0,"1":6.0,"2":2.0,"3":1.0,"4":2.0,"5":6.0,"6":10.0,"7":1.0,"8":8.0,"9":11.0},"2026-05-22":{"0":3.0,"1":14.0,"2":4.0,"3":1.0,"4":2.0,"5":14.0,"6":18.0,"7":1.0,"8":8.0,"9":11.0},"2026-05-23":{"0":3.0,"1":14.0,"2":4.0,"3":1.0,"4":2.0,"5":14.0,"6":18.0,"7":1.0,"8":8.0,"9":11.0},"2026-05-24":{"0":3.0,"1":12.0,"2":4.0,"3":1.0,"4":2.0,"5":12.0,"6":18.0,"7":1.0,"8":8.0,"9":11.0},"2026-05-25":{"0":3.0,"1":12.0,"2":3.0,"3":1.0,"4":2.0,"5":12.0,"6":18.0,"7":1.0,"8":0.0,"9":11.0},"2026-05-26":{"0":2.0,"1":10.0,"2":3.0,"3":1.0,"4":2.0,"5":10.0,"6":14.0,"7":1.0,"8":0.0,"9":11.0},"2026-05-27":{"0":2.0,"1":10.0,"2":3.0,"3":0.0,"4":2.0,"5":10.0,"6":14.0,"7":0.0,"8":0.0,"9":11.0},"2026-05-28":{"0":2.0,"1":10.0,"2":3.0,"3":0.0,"4":2.0,"5":10.0,"6":6.0,"7":0.0,"8":0.0,"9":7.0},"2026-05-29":{"0":2.0,"1":8.0,"2":3.0,"3":0.0,"4":2.0,"5":8.0,"6":6.0,"7":0.0,"8":0.0,"9":7.0},"2026-05-30":{"0":2.0,"1":8.0,"2":3.0,"3":0.0,"4":0.0,"5":8.0,"6":6.0,"7":0.0,"8":0.0,"9":7.0},"2026-05-31":{"0":2.0,"1":8.0,"2":2.0,"3":0.0,"4":0.0,"5":8.0,"6":6.0,"7":0.0,"8":0.0,"9":7.0},"2026-06-01":{"0":2.0,"1":14.0,"2":2.0,"3":1.0,"4":8.0,"5":18.0,"6":18.0,"7":0.0,"8":8.0,"9":7.0},"2026-06-02":{"0":2.0,"1":14.0,"2":2.0,"3":1.0,"4":8.0,"5":16.0,"6":12.0,"7":0.0,"8":8.0,"9":7.0},"2026-06-03":{"0":3.0,"1":12.0,"2":3.0,"3":1.0,"4":6.0,"5":22.0,"6":24.0,"7":1.0,"8":8.0,"9":9.0},"2026-06-04":{"0":3.0,"1":12.0,"2":2.0,"3":1.0,"4":6.0,"5":22.0,"6":24.0,"7":1.0,"8":8.0,"9":9.0},"2026-06-05":{"0":3.0,"1":12.0,"2":2.0,"3":1.0,"4":6.0,"5":20.0,"6":24.0,"7":1.0,"8":8.0,"9":10.0},"2026-06-06":{"0":3.0,"1":12.0,"2":2.0,"3":1.0,"4":6.0,"5":20.0,"6":22.0,"7":1.0,"8":8.0,"9":9.0},"2026-06-07":{"0":2.0,"1":10.0,"2":2.0,"3":1.0,"4":6.0,"5":18.0,"6":20.0,"7":0.0,"8":2.0,"9":9.0},"2026-06-08":{"0":2.0,"1":10.0,"2":2.0,"3":1.0,"4":6.0,"5":18.0,"6":10.0,"7":0.0,"8":2.0,"9":9.0},"2026-06-09":{"0":2.0,"1":8.0,"2":2.0,"3":0.0,"4":6.0,"5":18.0,"6":10.0,"7":0.0,"8":2.0,"9":9.0},"2026-06-10":{"0":3.0,"1":8.0,"2":2.0,"3":0.0,"4":6.0,"5":16.0,"6":22.0,"7":1.0,"8":8.0,"9":9.0},"2026-06-11":{"0":2.0,"1":8.0,"2":2.0,"3":0.0,"4":6.0,"5":16.0,"6":22.0,"7":1.0,"8":8.0,"9":9.0},"2026-06-12":{"0":2.0,"1":8.0,"2":2.0,"3":0.0,"4":4.0,"5":14.0,"6":22.0,"7":1.0,"8":8.0,"9":7.0},"2026-06-13":{"0":2.0,"1":6.0,"2":2.0,"3":0.0,"4":4.0,"5":14.0,"6":12.0,"7":1.0,"8":8.0,"9":7.0},"2026-06-14":{"0":2.0,"1":6.0,"2":2.0,"3":0.0,"4":4.0,"5":14.0,"6":12.0,"7":1.0,"8":8.0,"9":7.0},"2026-06-15":{"0":2.0,"1":4.0,"2":2.0,"3":0.0,"4":4.0,"5":12.0,"6":12.0,"7":1.0,"8":8.0,"9":1.0},"2026-06-16":{"0":1.0,"1":4.0,"2":1.0,"3":0.0,"4":4.0,"5":12.0,"6":12.0,"7":1.0,"8":8.0,"9":1.0},"2026-06-17":{"0":3.0,"1":12.0,"2":3.0,"3":1.0,"4":4.0,"5":18.0,"6":24.0,"7":2.0,"8":8.0,"9":9.0},"2026-06-18":{"0":3.0,"1":10.0,"2":3.0,"3":1.0,"4":2.0,"5":18.0,"6":20.0,"7":2.0,"8":8.0,"9":9.0},"2026-06-19":{"0":3.0,"1":10.0,"2":3.0,"3":1.0,"4":2.0,"5":16.0,"6":20.0,"7":1.0,"8":8.0,"9":9.0},"2026-06-20":{"0":3.0,"1":8.0,"2":3.0,"3":1.0,"4":2.0,"5":14.0,"6":20.0,"7":1.0,"8":8.0,"9":9.0},"2026-06-21":{"0":3.0,"1":8.0,"2":3.0,"3":1.0,"4":2.0,"5":14.0,"6":20.0,"7":1.0,"8":4.0,"9":9.0},"2026-06-22":{"0":2.0,"1":8.0,"2":2.0,"3":1.0,"4":2.0,"5":14.0,"6":16.0,"7":1.0,"8":4.0,"9":9.0},"2026-06-23":{"0":2.0,"1":6.0,"2":2.0,"3":1.0,"4":2.0,"5":12.0,"6":16.0,"7":1.0,"8":4.0,"9":5.0},"2026-06-24":{"0":2.0,"1":6.0,"2":2.0,"3":1.0,"4":2.0,"5":12.0,"6":16.0,"7":1.0,"8":4.0,"9":5.0},"2026-06-25":{"0":3.0,"1":14.0,"2":2.0,"3":0.0,"4":6.0,"5":20.0,"6":24.0,"7":2.0,"8":10.0,"9":13.0},"2026-06-26":{"0":3.0,"1":14.0,"2":2.0,"3":0.0,"4":4.0,"5":18.0,"6":24.0,"7":2.0,"8":10.0,"9":13.0},"2026-06-27":{"0":3.0,"1":12.0,"2":2.0,"3":0.0,"4":4.0,"5":18.0,"6":24.0,"7":2.0,"8":10.0,"9":13.0},"2026-06-28":{"0":3.0,"1":12.0,"2":2.0,"3":0.0,"4":4.0,"5":18.0,"6":22.0,"7":1.0,"8":6.0,"9":13.0},"2026-06-29":{"0":2.0,"1":10.0,"2":1.0,"3":0.0,"4":4.0,"5":16.0,"6":18.0,"7":1.0,"8":6.0,"9":13.0},"2026-06-30":{"0":2.0,"1":10.0,"2":1.0,"3":0.0,"4":4.0,"5":14.0,"6":18.0,"7":1.0,"8":6.0,"9":13.0},"2026-07-01":{"0":2.0,"1":8.0,"2":1.0,"3":0.0,"4":4.0,"5":12.0,"6":18.0,"7":1.0,"8":6.0,"9":10.0},"2026-07-02":{"0":4.0,"1":20.0,"2":2.0,"3":1.0,"4":4.0,"5":20.0,"6":26.0,"7":2.0,"8":6.0,"9":10.0},"2026-07-03":{"0":3.0,"1":20.0,"2":2.0,"3":1.0,"4":4.0,"5":20.0,"6":26.0,"7":2.0,"8":6.0,"9":10.0},"2026-07-04":{"0":3.0,"1":20.0,"2":2.0,"3":1.0,"4":4.0,"5":18.0,"6":26.0,"7":2.0,"8":6.0,"9":10.0},"2026-07-05":{"0":3.0,"1":18.0,"2":2.0,"3":1.0,"4":4.0,"5":18.0,"6":26.0,"7":2.0,"8":6.0,"9":9.0},"2026-07-06":{"0":3.0,"1":18.0,"2":2.0,"3":1.0,"4":4.0,"5":18.0,"6":22.0,"7":2.0,"8":4.0,"9":9.0},"2026-07-07":{"0":2.0,"1":18.0,"2":2.0,"3":1.0,"4":4.0,"5":16.0,"6":22.0,"7":2.0,"8":4.0,"9":7.0},"2026-07-08":{"0":2.0,"1":16.0,"2":1.0,"3":1.0,"4":2.0,"5":16.0,"6":22.0,"7":2.0,"8":4.0,"9":7.0},"2026-07-09":{"0":3.0,"1":16.0,"2":2.0,"3":2.0,"4":2.0,"5":22.0,"6":20.0,"7":2.0,"8":2.0,"9":15.0},"2026-07-10":{"0":3.0,"1":14.0,"2":2.0,"3":2.0,"4":2.0,"5":22.0,"6":18.0,"7":2.0,"8":10.0,"9":13.0}},
+    delivery:{"2025-12-23":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2025-12-24":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2025-12-26":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2025-12-27":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2025-12-28":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2025-12-29":{"0":60.0,"1":0.0,"2":30.0,"3":30.0,"4":0.0,"5":0.0,"6":30.0,"7":0.0,"8":20.0,"9":0.0},"2025-12-30":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2025-12-31":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-01":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-02":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-03":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-04":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-05":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-06":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-07":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-08":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-09":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-10":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-11":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-12":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-13":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-14":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":30.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-15":{"0":30.0,"1":10.0,"2":30.0,"3":30.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":15.0,"9":15.0},"2026-01-16":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-17":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-18":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-19":{"0":0.0,"1":30.0,"2":30.0,"3":0.0,"4":20.0,"5":0.0,"6":0.0,"7":30.0,"8":30.0,"9":20.0},"2026-01-20":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-21":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-22":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-23":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-24":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-25":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-26":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-27":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-28":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-29":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-30":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-01-31":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-01":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-02":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-03":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-04":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-05":{"0":30.0,"1":20.0,"2":30.0,"3":30.0,"4":0.0,"5":0.0,"6":0.0,"7":30.0,"8":20.0,"9":0.0},"2026-02-06":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-07":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-08":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-09":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-10":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-11":{"0":30.0,"1":0.0,"2":30.0,"3":0.0,"4":0.0,"5":20.0,"6":30.0,"7":0.0,"8":15.0,"9":0.0},"2026-02-12":{"0":30.0,"1":15.0,"2":30.0,"3":0.0,"4":0.0,"5":30.0,"6":30.0,"7":0.0,"8":15.0,"9":15.0},"2026-02-13":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-14":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-15":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-16":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-17":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-18":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-19":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-20":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-21":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-22":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-23":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-24":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-25":{"0":30.0,"1":0.0,"2":30.0,"3":30.0,"4":20.0,"5":0.0,"6":0.0,"7":0.0,"8":20.0,"9":0.0},"2026-02-26":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-27":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-02-28":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-01":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-02":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-03":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-04":{"0":60.0,"1":15.0,"2":60.0,"3":0.0,"4":0.0,"5":5.0,"6":30.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-05":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-06":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-07":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-08":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-09":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-10":{"0":30.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":10.0,"6":30.0,"7":30.0,"8":20.0,"9":10.0},"2026-03-11":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-12":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-13":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-14":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-15":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-16":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-17":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-18":{"0":30.0,"1":20.0,"2":30.0,"3":0.0,"4":0.0,"5":20.0,"6":30.0,"7":0.0,"8":0.0,"9":20.0},"2026-03-19":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-20":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-21":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-22":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-23":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-24":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-25":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-26":{"0":90.0,"1":30.0,"2":60.0,"3":30.0,"4":20.0,"5":30.0,"6":60.0,"7":30.0,"8":20.0,"9":0.0},"2026-03-27":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-28":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-29":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-30":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-03-31":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-01":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-02":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-03":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-04":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-06":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-07":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-08":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-09":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-10":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-11":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-12":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-13":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-14":{"0":30.0,"1":0.0,"2":30.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":30.0,"8":20.0,"9":20.0},"2026-04-15":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-16":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-17":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-18":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-19":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-20":{"0":30.0,"1":20.0,"2":30.0,"3":30.0,"4":20.0,"5":0.0,"6":0.0,"7":0.0,"8":20.0,"9":0.0},"2026-04-21":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-22":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-23":{"0":30.0,"1":20.0,"2":30.0,"3":0.0,"4":0.0,"5":20.0,"6":30.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-24":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-25":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-26":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-27":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-28":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-29":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-04-30":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-01":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-02":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-03":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-04":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-05":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-06":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-07":{"0":30.0,"1":20.0,"2":30.0,"3":30.0,"4":0.0,"5":0.0,"6":0.0,"7":30.0,"8":10.0,"9":5.0},"2026-05-08":{"0":30.0,"1":20.0,"2":30.0,"3":30.0,"4":0.0,"5":0.0,"6":0.0,"7":30.0,"8":10.0,"9":5.0},"2026-05-09":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-10":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-11":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-12":{"0":60.0,"1":0.0,"2":60.0,"3":0.0,"4":0.0,"5":20.0,"6":0.0,"7":0.0,"8":0.0,"9":20.0},"2026-05-13":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-14":{"0":30.0,"1":0.0,"2":30.0,"3":30.0,"4":0.0,"5":0.0,"6":30.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-15":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-16":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-17":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-18":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-19":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-20":{"0":60.0,"1":0.0,"2":30.0,"3":0.0,"4":0.0,"5":0.0,"6":20.0,"7":0.0,"8":20.0,"9":20.0},"2026-05-21":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-22":{"0":30.0,"1":20.0,"2":60.0,"3":0.0,"4":0.0,"5":20.0,"6":20.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-23":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-24":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-25":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-26":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-27":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-28":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-29":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-30":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-05-31":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-01":{"0":30.0,"1":20.0,"2":0.0,"3":60.0,"4":20.0,"5":30.0,"6":30.0,"7":0.0,"8":20.0,"9":0.0},"2026-06-02":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-03":{"0":30.0,"1":0.0,"2":30.0,"3":0.0,"4":0.0,"5":15.0,"6":30.0,"7":30.0,"8":0.0,"9":15.0},"2026-06-04":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-05":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-06":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-07":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-08":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-09":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-10":{"0":30.0,"1":0.0,"2":30.0,"3":0.0,"4":0.0,"5":0.0,"6":30.0,"7":30.0,"8":20.0,"9":0.0},"2026-06-11":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-12":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-13":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-14":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-15":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-16":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-17":{"0":60.0,"1":20.0,"2":60.0,"3":30.0,"4":0.0,"5":20.0,"6":30.0,"7":30.0,"8":0.0,"9":20.0},"2026-06-18":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-19":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-20":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-21":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-22":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-23":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-24":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-25":{"0":30.0,"1":20.0,"2":0.0,"3":0.0,"4":10.0,"5":20.0,"6":30.0,"7":30.0,"8":15.0,"9":20.0},"2026-06-26":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-27":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-28":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-29":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-06-30":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-07-01":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-07-02":{"0":60.0,"1":30.0,"2":60.0,"3":30.0,"4":0.0,"5":20.0,"6":30.0,"7":30.0,"8":0.0,"9":0.0},"2026-07-03":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-07-04":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-07-05":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-07-06":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-07-07":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-07-08":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":0.0,"9":0.0},"2026-07-09":{"0":30.0,"1":0.0,"2":30.0,"3":30.0,"4":0.0,"5":20.0,"6":0.0,"7":0.0,"8":0.0,"9":20.0},"2026-07-10":{"0":0.0,"1":0.0,"2":0.0,"3":0.0,"4":0.0,"5":0.0,"6":0.0,"7":0.0,"8":20.0,"9":0.0}},
+    calc:{"2025-12-23":{"0":7.722,"1":1.375,"2":4.361,"3":1.976,"4":0.471,"5":1.289,"6":2.749,"7":2.354,"8":0.0,"9":0.0},"2025-12-24":{"0":5.109,"1":0.901,"2":2.89,"3":1.295,"4":0.325,"5":0.897,"6":1.802,"7":1.623,"8":0.0,"9":0.0},"2025-12-26":{"0":10.877,"1":1.924,"2":6.151,"3":2.766,"4":0.684,"5":1.885,"6":3.848,"7":3.418,"8":0.0,"9":0.0},"2025-12-27":{"0":10.877,"1":1.924,"2":6.151,"3":2.766,"4":0.684,"5":1.885,"6":3.848,"7":3.418,"8":0.0,"9":0.0},"2025-12-28":{"0":0.949,"1":0.169,"2":0.538,"3":0.243,"4":0.059,"5":0.149,"6":0.338,"7":0.297,"8":0.0,"9":0.0},"2025-12-29":{"0":4.24,"1":0.754,"2":2.415,"3":1.084,"4":0.277,"5":0.707,"6":1.508,"7":1.385,"8":0.0,"9":0.0},"2025-12-30":{"0":8.776,"1":1.555,"2":4.965,"3":2.236,"4":0.55,"5":1.532,"6":3.111,"7":2.752,"8":0.0,"9":0.0},"2025-12-31":{"0":9.21,"1":1.63,"2":5.194,"3":2.343,"4":0.566,"5":1.572,"6":3.26,"7":2.829,"8":0.0,"9":0.0},"2026-01-01":{"0":3.307,"1":0.587,"2":1.878,"3":0.843,"4":0.213,"5":0.58,"6":1.173,"7":1.064,"8":0.0,"9":0.0},"2026-01-02":{"0":3.517,"1":0.622,"2":1.997,"3":0.894,"4":0.228,"5":0.61,"6":1.244,"7":1.141,"8":0.0,"9":0.0},"2026-01-03":{"0":5.182,"1":0.923,"2":2.92,"3":1.327,"4":0.31,"5":0.867,"6":1.846,"7":1.551,"8":0.0,"9":0.0},"2026-01-04":{"0":11.723,"1":2.086,"2":6.589,"3":2.999,"4":0.688,"5":2.016,"6":4.173,"7":3.442,"8":0.0,"9":0.0},"2026-01-05":{"0":9.09,"1":1.613,"2":5.143,"3":2.319,"4":0.568,"5":1.556,"6":3.226,"7":2.841,"8":0.0,"9":0.0},"2026-01-06":{"0":10.209,"1":1.809,"2":5.778,"3":2.601,"4":0.642,"5":1.717,"6":3.618,"7":3.21,"8":0.0,"9":0.0},"2026-01-07":{"0":8.757,"1":1.555,"2":4.948,"3":2.236,"4":0.54,"5":1.494,"6":3.111,"7":2.699,"8":0.0,"9":0.0},"2026-01-08":{"0":1.167,"1":0.206,"2":0.657,"3":0.297,"4":0.071,"5":0.195,"6":0.413,"7":0.357,"8":0.0,"9":0.0},"2026-01-09":{"0":7.203,"1":1.249,"2":4.145,"3":1.796,"4":0.54,"5":1.267,"6":2.499,"7":2.699,"8":0.0,"9":0.0},"2026-01-10":{"0":5.141,"1":0.908,"2":2.906,"3":1.305,"4":0.323,"5":0.857,"6":1.816,"7":1.617,"8":0.0,"9":0.0},"2026-01-11":{"0":5.713,"1":1.009,"2":3.247,"3":1.451,"4":0.374,"5":1.002,"6":2.019,"7":1.872,"8":0.0,"9":0.0},"2026-01-12":{"0":6.306,"1":1.114,"2":3.563,"3":1.602,"4":0.395,"5":1.084,"6":2.228,"7":1.973,"8":0.0,"9":0.0},"2026-01-13":{"0":4.04,"1":0.712,"2":2.278,"3":1.023,"4":0.251,"5":0.703,"6":1.424,"7":1.254,"8":0.0,"9":0.0},"2026-01-14":{"0":3.579,"1":0.636,"2":2.017,"3":0.914,"4":0.216,"5":0.62,"6":1.271,"7":1.082,"8":0.0,"9":0.0},"2026-01-15":{"0":4.107,"1":0.727,"2":2.301,"3":1.045,"4":0.239,"5":0.711,"6":1.454,"7":1.195,"8":0.0,"9":0.0},"2026-01-16":{"0":3.207,"1":0.57,"2":1.812,"3":0.819,"4":0.197,"5":0.552,"6":1.14,"7":0.987,"8":0.0,"9":0.0},"2026-01-17":{"0":1.481,"1":0.262,"2":0.838,"3":0.377,"4":0.094,"5":0.239,"6":0.524,"7":0.47,"8":0.0,"9":0.0},"2026-01-18":{"0":3.383,"1":0.6,"2":1.913,"3":0.863,"4":0.21,"5":0.548,"6":1.2,"7":1.052,"8":0.0,"9":0.0},"2026-01-19":{"0":2.702,"1":0.477,"2":1.539,"3":0.685,"4":0.181,"5":0.468,"6":0.954,"7":0.903,"8":0.0,"9":0.0},"2026-01-20":{"0":3.533,"1":0.626,"2":1.995,"3":0.899,"4":0.219,"5":0.618,"6":1.251,"7":1.094,"8":0.0,"9":0.0},"2026-01-21":{"0":5.35,"1":0.94,"2":3.014,"3":1.351,"4":0.333,"5":0.924,"6":1.88,"7":1.664,"8":0.0,"9":0.0},"2026-01-22":{"0":3.527,"1":0.629,"2":1.996,"3":0.904,"4":0.218,"5":0.588,"6":1.258,"7":1.088,"8":0.0,"9":0.0},"2026-01-23":{"0":0.465,"1":0.079,"2":0.266,"3":0.114,"4":0.034,"5":0.086,"6":0.159,"7":0.172,"8":0.0,"9":0.0},"2026-01-24":{"0":1.884,"1":0.335,"2":1.066,"3":0.481,"4":0.118,"5":0.311,"6":0.67,"7":0.588,"8":0.0,"9":0.0},"2026-01-25":{"0":3.947,"1":0.7,"2":2.244,"3":1.006,"4":0.257,"5":0.667,"6":1.4,"7":1.284,"8":0.0,"9":0.0},"2026-01-26":{"0":4.978,"1":0.884,"2":2.815,"3":1.271,"4":0.309,"5":0.827,"6":1.768,"7":1.545,"8":0.0,"9":0.0},"2026-01-27":{"0":6.037,"1":1.077,"2":3.39,"3":1.548,"4":0.349,"5":1.034,"6":2.154,"7":1.747,"8":0.0,"9":0.0},"2026-01-28":{"0":8.149,"1":1.451,"2":4.599,"3":2.085,"4":0.495,"5":1.395,"6":2.901,"7":2.473,"8":0.0,"9":0.0},"2026-01-29":{"0":6.675,"1":1.185,"2":3.772,"3":1.704,"4":0.413,"5":1.132,"6":2.37,"7":2.063,"8":0.0,"9":0.0},"2026-01-30":{"0":5.42,"1":0.962,"2":3.061,"3":1.383,"4":0.334,"5":0.936,"6":1.924,"7":1.67,"8":0.0,"9":0.0},"2026-01-31":{"0":6.502,"1":1.151,"2":3.684,"3":1.655,"4":0.414,"5":1.118,"6":2.303,"7":2.068,"8":0.0,"9":0.0},"2026-02-01":{"0":10.733,"1":1.924,"2":6.056,"3":2.766,"4":0.636,"5":1.811,"6":3.848,"7":3.18,"8":0.0,"9":0.0},"2026-02-02":{"0":11.155,"1":1.987,"2":6.264,"3":2.856,"4":0.649,"5":1.883,"6":3.973,"7":3.245,"8":0.0,"9":0.0},"2026-02-03":{"0":5.668,"1":1.006,"2":3.197,"3":1.446,"4":0.346,"5":0.984,"6":2.012,"7":1.73,"8":0.0,"9":0.0},"2026-02-04":{"0":5.002,"1":0.894,"2":2.823,"3":1.286,"4":0.3,"5":0.847,"6":1.789,"7":1.498,"8":0.0,"9":0.0},"2026-02-05":{"0":13.322,"1":2.369,"2":7.497,"3":3.405,"4":0.793,"5":2.281,"6":4.737,"7":3.965,"8":0.0,"9":0.0},"2026-02-06":{"0":10.044,"1":1.787,"2":5.651,"3":2.569,"4":0.596,"5":1.688,"6":3.574,"7":2.978,"8":0.0,"9":0.0},"2026-02-07":{"0":9.099,"1":1.616,"2":5.125,"3":2.323,"4":0.547,"5":1.544,"6":3.233,"7":2.734,"8":0.0,"9":0.0},"2026-02-08":{"0":9.222,"1":1.654,"2":5.181,"3":2.377,"4":0.527,"5":1.512,"6":3.307,"7":2.633,"8":0.0,"9":0.0},"2026-02-09":{"0":7.297,"1":1.307,"2":4.103,"3":1.879,"4":0.422,"5":1.197,"6":2.614,"7":2.11,"8":0.0,"9":0.0},"2026-02-10":{"0":5.773,"1":1.03,"2":3.258,"3":1.48,"4":0.348,"5":0.968,"6":2.059,"7":1.742,"8":0.0,"9":0.0},"2026-02-11":{"0":6.41,"1":1.146,"2":3.603,"3":1.648,"4":0.371,"5":1.072,"6":2.293,"7":1.854,"8":0.0,"9":0.0},"2026-02-12":{"0":6.212,"1":1.106,"2":3.53,"3":1.589,"4":0.398,"5":1.078,"6":2.211,"7":1.991,"8":0.0,"9":0.0},"2026-02-13":{"0":8.892,"1":1.581,"2":4.998,"3":2.272,"4":0.524,"5":1.486,"6":3.162,"7":2.621,"8":0.0,"9":0.0},"2026-02-14":{"0":7.54,"1":1.336,"2":4.261,"3":1.92,"4":0.47,"5":1.249,"6":2.671,"7":2.348,"8":0.0,"9":0.0},"2026-02-15":{"0":7.738,"1":1.376,"2":4.383,"3":1.978,"4":0.485,"5":1.319,"6":2.752,"7":2.425,"8":0.0,"9":0.0},"2026-02-16":{"0":6.778,"1":1.199,"2":3.836,"3":1.723,"4":0.429,"5":1.16,"6":2.397,"7":2.146,"8":0.0,"9":0.0},"2026-02-17":{"0":5.675,"1":0.994,"2":3.221,"3":1.429,"4":0.377,"5":0.99,"6":1.988,"7":1.884,"8":0.0,"9":0.0},"2026-02-18":{"0":7.353,"1":1.302,"2":4.157,"3":1.871,"4":0.46,"5":1.267,"6":2.604,"7":2.3,"8":0.0,"9":0.0},"2026-02-19":{"0":1.697,"1":0.296,"2":0.97,"3":0.425,"4":0.12,"5":0.299,"6":0.592,"7":0.6,"8":0.0,"9":0.0},"2026-02-20":{"0":4.861,"1":0.862,"2":2.76,"3":1.239,"4":0.313,"5":0.809,"6":1.725,"7":1.563,"8":0.0,"9":0.0},"2026-02-21":{"0":8.256,"1":1.468,"2":4.684,"3":2.11,"4":0.524,"5":1.397,"6":2.935,"7":2.621,"8":0.0,"9":0.0},"2026-02-22":{"0":5.789,"1":1.033,"2":3.252,"3":1.485,"4":0.335,"5":0.998,"6":2.066,"7":1.676,"8":0.0,"9":0.0},"2026-02-23":{"0":5.143,"1":0.916,"2":2.916,"3":1.317,"4":0.323,"5":0.887,"6":1.833,"7":1.617,"8":0.0,"9":0.0},"2026-02-24":{"0":8.561,"1":1.513,"2":4.839,"3":2.175,"4":0.537,"5":1.464,"6":3.026,"7":2.687,"8":0.0,"9":0.0},"2026-02-25":{"0":6.91,"1":1.222,"2":3.909,"3":1.757,"4":0.435,"5":1.187,"6":2.445,"7":2.175,"8":0.0,"9":0.0},"2026-02-26":{"0":11.455,"1":2.036,"2":6.476,"3":2.926,"4":0.709,"5":1.943,"6":4.071,"7":3.543,"8":0.0,"9":0.0},"2026-02-27":{"0":12.598,"1":2.252,"2":7.107,"3":3.237,"4":0.752,"5":2.14,"6":4.504,"7":3.762,"8":0.0,"9":0.0},"2026-02-28":{"0":9.158,"1":1.628,"2":5.171,"3":2.34,"4":0.56,"5":1.566,"6":3.256,"7":2.8,"8":0.0,"9":0.0},"2026-03-01":{"0":5.13,"1":0.921,"2":2.871,"3":1.325,"4":0.282,"5":0.837,"6":1.843,"7":1.409,"8":0.0,"9":0.0},"2026-03-02":{"0":5.237,"1":0.927,"2":2.961,"3":1.332,"4":0.328,"5":0.895,"6":1.853,"7":1.641,"8":0.0,"9":0.0},"2026-03-03":{"0":5.037,"1":0.893,"2":2.853,"3":1.283,"4":0.319,"5":0.877,"6":1.785,"7":1.593,"8":0.0,"9":0.0},"2026-03-04":{"0":5.993,"1":1.067,"2":3.393,"3":1.534,"4":0.373,"5":0.982,"6":2.134,"7":1.866,"8":0.0,"9":0.0},"2026-03-05":{"0":7.697,"1":1.366,"2":4.346,"3":1.964,"4":0.473,"5":1.317,"6":2.732,"7":2.366,"8":0.0,"9":0.0},"2026-03-06":{"0":4.973,"1":0.884,"2":2.818,"3":1.271,"4":0.313,"5":0.847,"6":1.768,"7":1.563,"8":0.0,"9":0.0},"2026-03-07":{"0":11.951,"1":2.13,"2":6.747,"3":3.062,"4":0.724,"5":1.996,"6":4.261,"7":3.62,"8":0.0,"9":0.0},"2026-03-08":{"0":10.289,"1":1.841,"2":5.799,"3":2.647,"4":0.607,"5":1.741,"6":3.682,"7":3.037,"8":0.0,"9":0.0},"2026-03-09":{"0":9.568,"1":1.694,"2":5.423,"3":2.435,"4":0.61,"5":1.662,"6":3.388,"7":3.049,"8":0.0,"9":0.0},"2026-03-10":{"0":6.439,"1":1.134,"2":3.627,"3":1.631,"4":0.397,"5":1.102,"6":2.269,"7":1.985,"8":0.0,"9":0.0},"2026-03-11":{"0":7.147,"1":1.27,"2":4.047,"3":1.825,"4":0.448,"5":1.207,"6":2.539,"7":2.241,"8":0.0,"9":0.0},"2026-03-12":{"0":6.471,"1":1.148,"2":3.658,"3":1.65,"4":0.402,"5":1.106,"6":2.296,"7":2.009,"8":0.0,"9":0.0},"2026-03-13":{"0":7.544,"1":1.339,"2":4.269,"3":1.925,"4":0.472,"5":1.309,"6":2.678,"7":2.36,"8":0.0,"9":0.0},"2026-03-14":{"0":7.517,"1":1.334,"2":4.26,"3":1.918,"4":0.476,"5":1.267,"6":2.668,"7":2.378,"8":0.0,"9":0.0},"2026-03-15":{"0":1.155,"1":0.206,"2":0.644,"3":0.297,"4":0.063,"5":0.205,"6":0.413,"7":0.315,"8":0.0,"9":0.0},"2026-03-16":{"0":7.13,"1":1.265,"2":4.032,"3":1.818,"4":0.445,"5":1.203,"6":2.529,"7":2.223,"8":0.0,"9":0.0},"2026-03-17":{"0":6.017,"1":1.077,"2":3.393,"3":1.548,"4":0.357,"5":1.008,"6":2.154,"7":1.783,"8":0.0,"9":0.0},"2026-03-18":{"0":16.452,"1":2.94,"2":9.269,"3":4.226,"4":0.972,"5":2.753,"6":5.88,"7":4.862,"8":0.0,"9":0.0},"2026-03-19":{"0":12.179,"1":2.179,"2":6.806,"3":3.133,"4":0.669,"5":2.062,"6":4.359,"7":3.346,"8":0.0,"9":0.0},"2026-03-20":{"0":11.962,"1":2.122,"2":6.756,"3":3.05,"4":0.738,"5":2.074,"6":4.244,"7":3.691,"8":0.0,"9":0.0},"2026-03-21":{"0":11.844,"1":2.096,"2":6.693,"3":3.014,"4":0.738,"5":2.0,"6":4.193,"7":3.691,"8":0.0,"9":0.0},"2026-03-22":{"0":7.16,"1":1.266,"2":4.041,"3":1.82,"4":0.443,"5":1.221,"6":2.533,"7":2.217,"8":0.0,"9":0.0},"2026-03-23":{"0":6.368,"1":1.123,"2":3.61,"3":1.614,"4":0.411,"5":1.1,"6":2.245,"7":2.057,"8":0.0,"9":0.0},"2026-03-24":{"0":6.683,"1":1.182,"2":3.777,"3":1.699,"4":0.418,"5":1.144,"6":2.364,"7":2.092,"8":0.0,"9":0.0},"2026-03-25":{"0":8.49,"1":1.508,"2":4.797,"3":2.168,"4":0.523,"5":1.456,"6":3.016,"7":2.615,"8":0.0,"9":0.0},"2026-03-26":{"0":6.751,"1":1.199,"2":3.812,"3":1.723,"4":0.415,"5":1.144,"6":2.397,"7":2.074,"8":0.0,"9":0.0},"2026-03-27":{"0":8.318,"1":1.469,"2":4.713,"3":2.112,"4":0.533,"5":1.419,"6":2.938,"7":2.663,"8":0.0,"9":0.0},"2026-03-28":{"0":7.279,"1":1.283,"2":4.127,"3":1.845,"4":0.471,"5":1.225,"6":2.566,"7":2.354,"8":0.0,"9":0.0},"2026-03-29":{"0":8.999,"1":1.598,"2":5.094,"3":2.297,"4":0.563,"5":1.518,"6":3.195,"7":2.817,"8":0.0,"9":0.0},"2026-03-30":{"0":7.685,"1":1.368,"2":4.317,"3":1.966,"4":0.449,"5":1.301,"6":2.736,"7":2.247,"8":0.0,"9":0.0},"2026-03-31":{"0":5.968,"1":1.058,"2":3.382,"3":1.521,"4":0.378,"5":1.04,"6":2.117,"7":1.89,"8":0.0,"9":0.0},"2026-04-01":{"0":2.022,"1":0.36,"2":1.138,"3":0.518,"4":0.12,"5":0.333,"6":0.72,"7":0.6,"8":0.0,"9":0.0},"2026-04-02":{"0":3.308,"1":0.583,"2":1.881,"3":0.838,"4":0.219,"5":0.576,"6":1.167,"7":1.094,"8":0.0,"9":0.0},"2026-04-03":{"0":2.012,"1":0.35,"2":1.161,"3":0.503,"4":0.152,"5":0.353,"6":0.7,"7":0.761,"8":0.0,"9":0.0},"2026-04-04":{"0":8.024,"1":1.413,"2":4.576,"3":2.032,"4":0.543,"5":1.375,"6":2.827,"7":2.716,"8":0.0,"9":0.0},"2026-04-06":{"0":6.854,"1":1.212,"2":3.851,"3":1.743,"4":0.409,"5":1.185,"6":2.424,"7":2.045,"8":0.0,"9":0.0},"2026-04-07":{"0":7.093,"1":1.27,"2":4.009,"3":1.825,"4":0.428,"5":1.207,"6":2.539,"7":2.14,"8":0.0,"9":0.0},"2026-04-08":{"0":11.07,"1":1.961,"2":6.239,"3":2.819,"4":0.674,"5":1.929,"6":3.922,"7":3.37,"8":0.0,"9":0.0},"2026-04-09":{"0":2.4,"1":0.424,"2":1.356,"3":0.61,"4":0.15,"5":0.424,"6":0.849,"7":0.749,"8":0.0,"9":0.0},"2026-04-10":{"0":8.68,"1":1.53,"2":4.9,"3":2.199,"4":0.543,"5":1.532,"6":3.06,"7":2.716,"8":0.0,"9":0.0},"2026-04-11":{"0":4.664,"1":0.822,"2":2.649,"3":1.181,"4":0.307,"5":0.791,"6":1.643,"7":1.534,"8":0.0,"9":0.0},"2026-04-12":{"0":8.652,"1":1.539,"2":4.872,"3":2.212,"4":0.517,"5":1.494,"6":3.077,"7":2.586,"8":0.0,"9":0.0},"2026-04-13":{"0":8.362,"1":1.481,"2":4.704,"3":2.129,"4":0.502,"5":1.427,"6":2.962,"7":2.508,"8":0.0,"9":0.0},"2026-04-14":{"0":7.591,"1":1.353,"2":4.288,"3":1.944,"4":0.462,"5":1.331,"6":2.705,"7":2.312,"8":0.0,"9":0.0},"2026-04-15":{"0":8.084,"1":1.429,"2":4.538,"3":2.054,"4":0.48,"5":1.401,"6":2.857,"7":2.401,"8":0.0,"9":0.0},"2026-04-16":{"0":10.254,"1":1.833,"2":5.773,"3":2.635,"4":0.603,"5":1.747,"6":3.665,"7":3.014,"8":0.0,"9":0.0},"2026-04-17":{"0":6.915,"1":1.224,"2":3.9,"3":1.76,"4":0.424,"5":1.158,"6":2.448,"7":2.122,"8":0.0,"9":0.0},"2026-04-18":{"0":7.997,"1":1.413,"2":4.506,"3":2.032,"4":0.49,"5":1.357,"6":2.827,"7":2.449,"8":0.0,"9":0.0},"2026-04-19":{"0":6.985,"1":1.249,"2":3.922,"3":1.796,"4":0.401,"5":1.162,"6":2.499,"7":2.003,"8":0.0,"9":0.0},"2026-04-20":{"0":7.652,"1":1.369,"2":4.287,"3":1.969,"4":0.429,"5":1.271,"6":2.739,"7":2.146,"8":0.0,"9":0.0},"2026-04-21":{"0":7.982,"1":1.413,"2":4.538,"3":2.032,"4":0.521,"5":1.399,"6":2.827,"7":2.603,"8":0.0,"9":0.0},"2026-04-22":{"0":7.805,"1":1.385,"2":4.399,"3":1.99,"4":0.473,"5":1.333,"6":2.769,"7":2.366,"8":0.0,"9":0.0},"2026-04-23":{"0":4.881,"1":0.864,"2":2.761,"3":1.242,"4":0.307,"5":0.835,"6":1.728,"7":1.534,"8":0.0,"9":0.0},"2026-04-24":{"0":9.383,"1":1.67,"2":5.285,"3":2.401,"4":0.56,"5":1.608,"6":3.341,"7":2.8,"8":0.0,"9":0.0},"2026-04-25":{"0":4.6,"1":0.81,"2":2.59,"3":1.17,"4":0.28,"5":0.78,"6":1.63,"7":1.4,"8":0.0,"9":0.0},"2026-04-26":{"0":2.308,"1":0.409,"2":1.305,"3":0.588,"4":0.144,"5":0.373,"6":0.818,"7":0.719,"8":0.0,"9":0.0},"2026-04-27":{"0":2.519,"1":0.448,"2":1.425,"3":0.644,"4":0.156,"5":0.436,"6":0.896,"7":0.779,"8":0.0,"9":0.0},"2026-04-28":{"0":5.484,"1":0.969,"2":3.067,"3":1.393,"4":0.316,"5":0.962,"6":1.938,"7":1.581,"8":0.0,"9":0.0},"2026-04-29":{"0":8.682,"1":1.53,"2":4.906,"3":2.199,"4":0.548,"5":1.516,"6":3.06,"7":2.74,"8":0.0,"9":0.0},"2026-04-30":{"0":6.724,"1":1.187,"2":3.788,"3":1.706,"4":0.413,"5":1.168,"6":2.374,"7":2.063,"8":0.0,"9":0.0},"2026-05-01":{"0":7.776,"1":1.386,"2":4.379,"3":1.993,"4":0.461,"5":1.299,"6":2.773,"7":2.306,"8":0.0,"9":0.0},"2026-05-02":{"0":8.498,"1":1.508,"2":4.787,"3":2.168,"4":0.512,"5":1.425,"6":3.016,"7":2.562,"8":0.0,"9":0.0},"2026-05-03":{"0":8.217,"1":1.461,"2":4.617,"3":2.1,"4":0.483,"5":1.377,"6":2.922,"7":2.413,"8":0.0,"9":0.0},"2026-05-04":{"0":7.985,"1":1.418,"2":4.497,"3":2.039,"4":0.479,"5":1.361,"6":2.837,"7":2.395,"8":0.0,"9":0.0},"2026-05-05":{"0":6.667,"1":1.163,"2":3.781,"3":1.672,"4":0.445,"5":1.181,"6":2.326,"7":2.223,"8":0.0,"9":0.0},"2026-05-06":{"0":7.122,"1":1.251,"2":4.028,"3":1.798,"4":0.456,"5":1.247,"6":2.502,"7":2.282,"8":0.0,"9":0.0},"2026-05-07":{"0":7.753,"1":1.378,"2":4.347,"3":1.981,"4":0.448,"5":1.309,"6":2.756,"7":2.241,"8":0.0,"9":0.0},"2026-05-08":{"0":9.724,"1":1.718,"2":5.499,"3":2.469,"4":0.613,"5":1.69,"6":3.436,"7":3.067,"8":0.0,"9":0.0},"2026-05-09":{"0":10.581,"1":1.865,"2":5.973,"3":2.681,"4":0.662,"5":1.817,"6":3.73,"7":3.311,"8":0.0,"9":0.0},"2026-05-10":{"0":8.847,"1":1.574,"2":4.983,"3":2.263,"4":0.529,"5":1.488,"6":3.148,"7":2.645,"8":0.0,"9":0.0},"2026-05-11":{"0":9.329,"1":1.675,"2":5.241,"3":2.409,"4":0.53,"5":1.55,"6":3.351,"7":2.651,"8":0.0,"9":0.0},"2026-05-12":{"0":9.33,"1":1.68,"2":5.24,"3":2.41,"4":0.53,"5":1.55,"6":3.35,"7":2.65,"8":0.0,"9":0.0},"2026-05-13":{"0":9.97,"1":1.76,"2":5.62,"3":2.53,"4":0.61,"5":1.71,"6":3.53,"7":3.06,"8":0.0,"9":0.0},"2026-05-14":{"0":9.968,"1":1.763,"2":5.62,"3":2.535,"4":0.611,"5":1.711,"6":3.527,"7":3.055,"8":0.0,"9":0.0},"2026-05-15":{"0":8.685,"1":1.535,"2":4.904,"3":2.207,"4":0.541,"5":1.484,"6":3.07,"7":2.704,"8":0.0,"9":0.0},"2026-05-16":{"0":8.43,"1":1.486,"2":4.744,"3":2.136,"4":0.515,"5":1.474,"6":2.972,"7":2.574,"8":0.0,"9":0.0},"2026-05-17":{"0":6.203,"1":1.101,"2":3.491,"3":1.582,"4":0.372,"5":1.062,"6":2.201,"7":1.86,"8":0.0,"9":0.0},"2026-05-19":{"0":6.171,"1":1.094,"2":3.5,"3":1.572,"4":0.395,"5":1.062,"6":2.188,"7":1.973,"8":0.0,"9":0.0},"2026-05-20":{"0":5.962,"1":1.05,"2":3.358,"3":1.509,"4":0.367,"5":1.048,"6":2.1,"7":1.837,"8":0.0,"9":0.0},"2026-05-21":{"0":5.546,"1":0.982,"2":3.122,"3":1.412,"4":0.335,"5":0.946,"6":1.965,"7":1.676,"8":0.0,"9":0.0},"2026-05-22":{"0":5.546,"1":0.982,"2":3.122,"3":1.412,"4":0.335,"5":0.946,"6":1.965,"7":1.676,"8":0.0,"9":0.0},"2026-05-23":{"0":8.471,"1":1.501,"2":4.79,"3":2.158,"4":0.529,"5":1.425,"6":3.003,"7":2.645,"8":0.0,"9":0.0},"2026-05-24":{"0":7.673,"1":1.356,"2":4.342,"3":1.949,"4":0.486,"5":1.309,"6":2.712,"7":2.431,"8":0.0,"9":0.0},"2026-05-25":{"0":6.97,"1":1.23,"2":3.93,"3":1.77,"4":0.42,"5":1.18,"6":2.47,"7":2.12,"8":0.0,"9":0.0},"2026-05-26":{"0":7.837,"1":1.398,"2":4.412,"3":2.01,"4":0.462,"5":1.343,"6":2.796,"7":2.312,"8":0.0,"9":0.0},"2026-05-27":{"0":7.624,"1":1.349,"2":4.298,"3":1.939,"4":0.467,"5":1.281,"6":2.698,"7":2.336,"8":0.0,"9":0.0},"2026-05-28":{"0":6.892,"1":1.231,"2":3.882,"3":1.769,"4":0.408,"5":1.183,"6":2.462,"7":2.039,"8":0.0,"9":0.0},"2026-05-29":{"0":4.955,"1":0.871,"2":2.797,"3":1.252,"4":0.313,"5":0.875,"6":1.741,"7":1.563,"8":0.0,"9":0.0},"2026-05-30":{"0":5.361,"1":0.948,"2":3.029,"3":1.363,"4":0.334,"5":0.926,"6":1.897,"7":1.67,"8":0.0,"9":0.0},"2026-05-31":{"0":7.376,"1":1.315,"2":4.176,"3":1.891,"4":0.456,"5":1.243,"6":2.631,"7":2.282,"8":0.0,"9":0.0},"2026-06-01":{"0":7.866,"1":1.391,"2":4.438,"3":2.0,"4":0.485,"5":1.357,"6":2.783,"7":2.425,"8":0.0,"9":0.0},"2026-06-02":{"0":6.412,"1":1.141,"2":3.624,"3":1.641,"4":0.393,"5":1.084,"6":2.282,"7":1.967,"8":0.0,"9":0.0},"2026-06-03":{"0":7.017,"1":1.246,"2":3.945,"3":1.791,"4":0.416,"5":1.203,"6":2.492,"7":2.08,"8":0.0,"9":0.0},"2026-06-04":{"0":2.597,"1":0.458,"2":1.467,"3":0.659,"4":0.163,"5":0.45,"6":0.916,"7":0.814,"8":0.0,"9":0.0},"2026-06-05":{"0":8.511,"1":1.505,"2":4.808,"3":2.163,"4":0.531,"5":1.464,"6":3.009,"7":2.657,"8":0.0,"9":0.0},"2026-06-06":{"0":7.885,"1":1.397,"2":4.442,"3":2.007,"4":0.479,"5":1.337,"6":2.793,"7":2.395,"8":0.0,"9":0.0},"2026-06-07":{"0":5.173,"1":0.925,"2":2.908,"3":1.329,"4":0.3,"5":0.889,"6":1.85,"7":1.498,"8":0.0,"9":0.0},"2026-06-08":{"0":6.985,"1":1.244,"2":3.949,"3":1.789,"4":0.429,"5":1.205,"6":2.489,"7":2.146,"8":0.0,"9":0.0},"2026-06-09":{"0":7.213,"1":1.288,"2":4.069,"3":1.852,"4":0.432,"5":1.211,"6":2.577,"7":2.158,"8":0.0,"9":0.0},"2026-06-10":{"0":7.813,"1":1.381,"2":4.438,"3":1.986,"4":0.509,"5":1.321,"6":2.763,"7":2.544,"8":0.0,"9":0.0},"2026-06-11":{"0":7.011,"1":1.249,"2":3.957,"3":1.796,"4":0.424,"5":1.213,"6":2.499,"7":2.122,"8":0.0,"9":0.0},"2026-06-12":{"0":8.596,"1":1.532,"2":4.844,"3":2.202,"4":0.514,"5":1.458,"6":3.064,"7":2.568,"8":0.0,"9":0.0},"2026-06-13":{"0":4.444,"1":0.781,"2":2.517,"3":1.123,"4":0.288,"5":0.769,"6":1.562,"7":1.438,"8":0.0,"9":0.0},"2026-06-14":{"0":8.42,"1":1.496,"2":4.768,"3":2.151,"4":0.528,"5":1.438,"6":2.993,"7":2.639,"8":0.0,"9":0.0},"2026-06-15":{"0":7.85,"1":1.4,"2":4.42,"3":2.012,"4":0.465,"5":1.329,"6":2.8,"7":2.324,"8":0.0,"9":0.0},"2026-06-16":{"0":6.999,"1":1.238,"2":3.956,"3":1.779,"4":0.439,"5":1.217,"6":2.475,"7":2.193,"8":0.0,"9":0.0},"2026-06-17":{"0":7.907,"1":1.408,"2":4.441,"3":2.025,"4":0.46,"5":1.363,"6":2.817,"7":2.3,"8":0.0,"9":0.0},"2026-06-18":{"0":8.207,"1":1.459,"2":4.588,"3":2.097,"4":0.462,"5":1.377,"6":2.918,"7":2.312,"8":0.0,"9":0.0},"2026-06-19":{"0":7.869,"1":1.393,"2":4.454,"3":2.003,"4":0.497,"5":1.353,"6":2.786,"7":2.485,"8":0.0,"9":0.0},"2026-06-20":{"0":6.27,"1":1.111,"2":3.551,"3":1.597,"4":0.397,"5":1.058,"6":2.222,"7":1.985,"8":0.0,"9":0.0},"2026-06-21":{"0":3.933,"1":0.697,"2":2.231,"3":1.001,"4":0.252,"5":0.673,"6":1.393,"7":1.26,"8":0.0,"9":0.0},"2026-06-22":{"0":7.184,"1":1.276,"2":4.044,"3":1.835,"4":0.429,"5":1.203,"6":2.553,"7":2.146,"8":0.0,"9":0.0},"2026-06-23":{"0":6.06,"1":1.075,"2":3.433,"3":1.546,"4":0.383,"5":1.046,"6":2.151,"7":1.914,"8":0.0,"9":0.0},"2026-06-24":{"0":6.835,"1":1.217,"2":3.85,"3":1.75,"4":0.408,"5":1.175,"6":2.435,"7":2.039,"8":0.0,"9":0.0},"2026-06-25":{"0":5.345,"1":0.947,"2":3.018,"3":1.361,"4":0.33,"5":0.916,"6":1.894,"7":1.652,"8":0.0,"9":0.0},"2026-06-26":{"0":8.484,"1":1.505,"2":4.78,"3":2.163,"4":0.514,"5":1.417,"6":3.009,"7":2.568,"8":0.0,"9":0.0},"2026-06-27":{"0":7.275,"1":1.28,"2":4.115,"3":1.84,"4":0.465,"5":1.263,"6":2.56,"7":2.324,"8":0.0,"9":0.0},"2026-06-28":{"0":7.856,"1":1.397,"2":4.455,"3":2.007,"4":0.497,"5":1.321,"6":2.793,"7":2.485,"8":0.0,"9":0.0},"2026-06-29":{"0":7.993,"1":1.427,"2":4.525,"3":2.051,"4":0.493,"5":1.357,"6":2.854,"7":2.467,"8":0.0,"9":0.0},"2026-06-30":{"0":7.864,"1":1.403,"2":4.42,"3":2.017,"4":0.458,"5":1.341,"6":2.807,"7":2.288,"8":0.0,"9":0.0},"2026-07-01":{"0":6.249,"1":1.106,"2":3.528,"3":1.589,"4":0.388,"5":1.078,"6":2.211,"7":1.938,"8":0.0,"9":0.0},"2026-07-02":{"0":7.703,"1":1.364,"2":4.353,"3":1.961,"4":0.479,"5":1.335,"6":2.729,"7":2.395,"8":0.0,"9":0.0},"2026-07-03":{"0":5.67,"1":1.011,"2":3.181,"3":1.453,"4":0.326,"5":0.958,"6":2.022,"7":1.629,"8":0.0,"9":0.0},"2026-07-04":{"0":3.246,"1":0.575,"2":1.831,"3":0.826,"4":0.2,"5":0.56,"6":1.15,"7":0.999,"8":0.0,"9":0.0},"2026-07-05":{"0":7.634,"1":1.373,"2":4.302,"3":1.973,"4":0.443,"5":1.265,"6":2.746,"7":2.217,"8":0.0,"9":0.0},"2026-07-06":{"0":8.339,"1":1.478,"2":4.694,"3":2.124,"4":0.503,"5":1.434,"6":2.955,"7":2.514,"8":0.0,"9":0.0},"2026-07-07":{"0":7.003,"1":1.241,"2":3.96,"3":1.784,"4":0.437,"5":1.201,"6":2.482,"7":2.187,"8":0.0,"9":0.0},"2026-07-08":{"0":6.398,"1":1.146,"2":3.588,"3":1.648,"4":0.361,"5":1.062,"6":2.293,"7":1.807,"8":0.0,"9":0.0},"2026-07-09":{"0":6.313,"1":1.114,"2":3.579,"3":1.602,"4":0.407,"5":1.088,"6":2.228,"7":2.033,"8":0.0,"9":0.0},"2026-07-10":{"0":6.69,"1":1.187,"2":3.782,"3":1.706,"4":0.416,"5":1.128,"6":2.374,"7":2.08,"8":0.0,"9":0.0}},
+    cars:{},
+    ohctype:{},
+    delctype:{},
+    log:[]
+  };
+}
+
+let DB = loadDB();
+let entryState = {
+  tank:     DETS.map(()=>({qty:0})),
+  onhand:   DETS.map((_,i)=>({qty:0,ctype:DET_CTYPE[i]})),
+  delivery: DETS.map((_,i)=>({qty:0,ctype:DET_CTYPE[i]})),
+};
+
+function loadDB() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch(e){}
+  return defaultDB();
+}
+
+function saveDB() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+    updateStorageBar();
+  } catch(e) {
+    showToast('Warning: could not save data');
+  }
+}
+
+function updateStorageBar() {
+  try {
+    const bytes = (localStorage.getItem(STORAGE_KEY)||'').length;
+    const kb = (bytes/1024).toFixed(1);
+    const entries = (DB.log||[]).length;
+    const pending=(DB.outbox||[]).length;
+    document.getElementById('storage-bar').textContent =
+      `${pending?('\u26A0 '+pending+' rows waiting to sync  |  '):''}\uD83D\uDCBE ${entries} entries saved locally  |  ${kb} KB used`;
+  } catch(e){}
+}
+
+function exportCSV(){
+  // One row per date per detergent with all measures — clean import format for SharePoint/Excel/Power BI
+  const rows=[['Date','Detergent','Pod Tank Gal','Containers Inventory','Inventory Gal','Delivered Gal','Total Gal','Daily Usage Gal']];
+  allDates().forEach(d=>{
+    DETS.forEach((name,i)=>{
+      const u=dailyUsageDet(i,d);
+      rows.push([
+        d, name,
+        (DB.tank[d]||{})[i]??'',
+        (DB.ohqty[d]||{})[i]??'',
+        (DB.onhand[d]||{})[i]??'',
+        (DB.delivery[d]||{})[i]??'',
+        totalGalDet(i,d),
+        u===null?'':u.toFixed(2)
+      ]);
+    });
+  });
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='detergent_inventory_'+today()+'.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('CSV exported — '+(allDates().length)+' days of data');
+}
+
+function confirmClearData() {
+  if (confirm('Clear ALL saved data and reset to sample data? This cannot be undone.')) {
+    localStorage.removeItem(STORAGE_KEY);
+    DB = defaultDB();
+    saveDB();
+    rebuildDatePicker();
+    renderDash();
+    renderLog();
+    showToast('Data cleared — sample data restored');
+  }
+}
+
+// ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
+function today(){ return new Date().toISOString().slice(0,10); }
+function allDates(){ return [...new Set([...Object.keys(DB.tank),...Object.keys(DB.onhand)])].sort(); }
+function ohTotal(d){ const r=DB.onhand[d]; return r?Object.values(r).reduce((a,b)=>a+b,0):0; }
+function tankTotal(d){ const r=DB.tank[d]; return r?Object.values(r).reduce((a,b)=>a+b,0):0; }
+function delivTotal(d){ const r=DB.delivery[d]; return r?Object.values(r).reduce((a,b)=>a+b,0):0; }
+function ctypeLabel(ct){ return ct==='drum'?'30 Gal Drum':'EasyChem Container'; }
+function galPerUnit(ct){ return GAL[ct]||1; }
+function fmt(v,d=1){ if(v===null||v===undefined||isNaN(v))return'—'; return(+v).toFixed(d); }
+function fmtI(v){ if(v===null||v===undefined||isNaN(v))return'—'; return Math.round(v).toLocaleString(); }
+function clamp(v,step,dec){ return parseFloat(Math.max(0,Math.round(v/step)*step).toFixed(dec)); }
+
+// Total gallons for one detergent on a date: pod tank + containers on hand
+function totalGalDet(i,date){
+  return ((DB.tank[date]||{})[i]||0)+((DB.onhand[date]||{})[i]||0);
+}
+// Usage = prior day total gallons − (current total gallons − deliveries received)
+function dailyUsageDet(i,date){
+  const dates=allDates(),idx=dates.indexOf(date);
+  if(idx<=0)return null;
+  const prev=dates[idx-1];
+  return totalGalDet(i,prev)-(totalGalDet(i,date)-((DB.delivery[date]||{})[i]||0));
+}
+function dailyUsageTotal(date){
+  const dates=allDates(),idx=dates.indexOf(date);
+  if(idx<=0)return null;
+  const prev=dates[idx-1];
+  return (tankTotal(prev)+ohTotal(prev))-((tankTotal(date)+ohTotal(date))-delivTotal(date));
+}
+function trailingAvgDet(i,date,w=7){
+  const dates=allDates(),idx=dates.indexOf(date),vals=[];
+  for(let k=idx;k>0&&vals.length<w;k--){const u=dailyUsageDet(i,dates[k]);if(u!==null)vals.push(u);}
+  return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+}
+function trailingAvgTotal(date,w=7){
+  const dates=allDates(),idx=dates.indexOf(date),vals=[];
+  for(let k=idx;k>0&&vals.length<w;k--){const u=dailyUsageTotal(dates[k]);if(u!==null)vals.push(u);}
+  return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+}
+function dohDet(i,date){ const avg=trailingAvgDet(i,date); if(!avg||avg<=0)return null; return totalGalDet(i,date)/avg; }
+function dohTotal(date){ const avg=trailingAvgTotal(date); if(!avg||avg<=0)return null; return (tankTotal(date)+ohTotal(date))/avg; }
+
+// ── Calculated (expected) usage from wash counts ──
+function calcUsageDet(i,date){ const r=(DB.calc||{})[date]; if(!r)return null; const v=r[i]; return (v===undefined||v===null)?null:v; }
+function calcAvgDet(i,date,w=7){
+  const dates=allDates(),idx=dates.indexOf(date),vals=[];
+  for(let k=idx;k>0&&vals.length<w;k--){ const c=calcUsageDet(i,dates[k]); if(c!==null)vals.push(c); }
+  return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+}
+
+// ── Needs Attention: low supply, tank below min, usage variance ──
+// Actual usage systematically differs from theoretical calc (injector calibration),
+// so we learn each detergent's normal actual/calc ratio from history and alert
+// only when the recent ratio SHIFTS from its own baseline (clog, leak, etc.)
+const VARIANCE_PCT = 0.30;      // flag when recent ratio drifts >30% from baseline
+const VARIANCE_MIN_GAL = 0.5;   // ignore detergents with tiny expected usage
+function baselineRatio(i,date){
+  // rolling actual/calc ratio from the ~30 days before the recent week —
+  // adapts to seasonal drift, so only abrupt changes get flagged
+  const dates=allDates(),idx=dates.indexOf(date);
+  let act=0,cal=0;
+  for(let k=Math.max(1,idx-37);k<idx-7;k++){
+    const a=dailyUsageDet(i,dates[k]),c=calcUsageDet(i,dates[k]);
+    if(a!==null&&c!==null&&c>0&&a>=0){ act+=a; cal+=c; }
+  }
+  return cal>0?act/cal:null;
+}
+// Median-based trailing usage: robust against single-day data errors
+// (e.g. a duplicated delivery entry that makes one day's usage spike)
+function trailingMedianDet(i,date,w=7){
+  const dates=allDates(),idx=dates.indexOf(date),vals=[];
+  for(let k=idx;k>0&&vals.length<w;k--){ const u=dailyUsageDet(i,dates[k]); if(u!==null)vals.push(u); }
+  if(!vals.length)return null;
+  vals.sort((a,b)=>a-b);
+  const m=Math.floor(vals.length/2);
+  return vals.length%2?vals[m]:(vals[m-1]+vals[m])/2;
+}
+function calcMedianDet(i,date,w=7){
+  const dates=allDates(),idx=dates.indexOf(date),vals=[];
+  for(let k=idx;k>0&&vals.length<w;k--){ const c=calcUsageDet(i,dates[k]); if(c!==null)vals.push(c); }
+  if(!vals.length)return null;
+  vals.sort((a,b)=>a-b);
+  const m=Math.floor(vals.length/2);
+  return vals.length%2?vals[m]:(vals[m-1]+vals[m])/2;
+}
+// Refill level per detergent: 2 days of 7-day trailing avg usage, floored at the static min threshold
+function refillLevel(i,date){
+  const avg=trailingAvgDet(i,date);
+  const twoDay=(avg!==null&&avg>0)?2*avg:0;
+  return Math.max(twoDay, MIN_LEVEL[i]);
+}
+function needsAttention(date){
+  const alerts=[];
+  DETS.forEach((name,i)=>{
+    const d=dohDet(i,date);
+    if(d!==null&&d<20) alerts.push({type:'low',i,name,msg:`${d.toFixed(1)} days of supply left — reorder`,sev:d<7?'red':'amber'});
+    const tk=(DB.tank[date]||{})[i];
+    const rl=refillLevel(i,date);
+    if(tk!==undefined&&tk<rl) alerts.push({type:'tank',i,name,msg:`Pod tank at ${fmt(tk,1)} gal (refill level ${fmt(rl,1)}) — refill`,sev:'red'});
+    const act=trailingMedianDet(i,date), calc=calcMedianDet(i,date), base=baselineRatio(i,date);
+    if(act!==null&&calc!==null&&base!==null&&calc>=VARIANCE_MIN_GAL){
+      const expected=calc*base;           // what "normal" looks like for THIS detergent
+      if(expected>0){
+        const drift=(act-expected)/expected;
+        if(drift>VARIANCE_PCT) alerts.push({type:'var',i,name,msg:`Using ${fmt(act,1)} gal/day vs ~${fmt(expected,1)} normal (+${Math.round(drift*100)}%) — usage is unusually high`,sev:'amber'});
+        else if(drift<-VARIANCE_PCT) alerts.push({type:'var',i,name,msg:`Using ${fmt(act,1)} gal/day vs ~${fmt(expected,1)} normal (${Math.round(drift*100)}%) — usage is unusually low`,sev:'red'});
+      }
+    }
+  });
+  // Triage order: tank refills first (act now), usage anomalies next (investigate), reorders last (desk work)
+  const rank={tank:0,var:1,low:2};
+  alerts.sort((a,b)=>(rank[a.type]-rank[b.type])||(a.sev==='red'?0:1)-(b.sev==='red'?0:1));
+  return alerts;
+}
+
+// ═══════════════════════════════════════════════
+// STEPPER
+// ═══════════════════════════════════════════════
+function stepperHTML(id,val,step,dec){
+  return `<div class="stepper">
+    <button class="step-btn" onclick="stepChange('${id}',${step},-1,${dec})">&#8722;</button>
+    <div class="step-div"></div>
+    <input class="step-input" type="number" id="${id}" value="${val}" min="0" step="${step}"
+           inputmode="decimal" onfocus="this.select()" onchange="stepCommit('${id}',${step},${dec})">
+    <div class="step-div"></div>
+    <button class="step-btn" onclick="stepChange('${id}',${step},1,${dec})">&#43;</button>
+  </div>`;
+}
+function stepChange(id,step,dir,dec){
+  const el=document.getElementById(id); if(!el)return;
+  el.value=clamp((parseFloat(el.value)||0)+dir*step,step,dec);
+  onAnyChange(id);
+}
+function stepCommit(id,step,dec){
+  const el=document.getElementById(id); if(!el)return;
+  el.value=clamp(parseFloat(el.value)||0,step,dec);
+  onAnyChange(id);
+}
+function onAnyChange(id){
+  const parts=id.split('-'),tab=parts[1],i=parseInt(parts[2]);
+  const val=parseFloat(document.getElementById(id).value)||0;
+  if(tab==='cars'){ updateCarsPreview(); return; }
+  if(tab==='cars'){
+    const counts=PACKAGES.map((_,p)=>parseInt(document.getElementById('qn-cars-'+p).value)||0);
+    const total=counts.reduce((a,b)=>a+b,0);
+    const warnings=[];
+    if((DB.cars||{})[date]!==undefined) warnings.push('Cars Washed already has an entry for '+date+'. Saving again REPLACES it on this iPad but ADDS EXTRA ROWS in the cloud workbook.');
+    if(total===0) warnings.push('Total cars is ZERO — save anyway?');
+    if(total>2500) warnings.push('Total cars is '+total+' — that is unusually high, please double-check.');
+    if(warnings.length && !confirm('\u26A0 PLEASE REVIEW BEFORE SAVING\n\n'+warnings.join('\n\n')+'\n\nSave anyway?')){ showToast('Save canceled'); return; }
+    DB.cars=DB.cars||{}; DB.cars[date]=counts;
+    const gals=calcFromCars(counts);
+    DB.calc=DB.calc||{}; DB.calc[date]={};
+    DETS.forEach((_,i)=>{ DB.calc[date][i]=gals[i]; });
+    const newLogs=PACKAGES.map((name,p)=>({date,det:name,area:'Cars Washed',qty:counts[p],meas:'Cars',gal:0,color:'#5A6270'}));
+    DB.log=[...newLogs,...(DB.log||[])];
+    const rows=PACKAGES.map((name,p)=>[date,name,'Cars Washed',counts[p],'Cars',0])
+      .concat(DETS.map((name,i)=>[date,name,'Calc Usage',gals[i],'Gallons',gals[i]]));
+    sendRows(rows).then(s=>{ if(s==='queued') showToast('Saved locally — will sync to cloud when online'); });
+    PACKAGES.forEach((_,p)=>{ const el=document.getElementById('qn-cars-'+p); if(el)el.value=0; });
+    const pb=document.getElementById('cars-paste'); if(pb){pb.value='';} const ps=document.getElementById('cars-paste-status'); if(ps){ps.textContent='';}
+    updateCarsPreview();
+    saveDB(); rebuildDatePicker(); renderDash(); renderLog();
+    showToast('Cars Washed saved for '+date+' ('+total+' cars)');
+    return;
+  }
+
+  if(tab==='tank'){ entryState.tank[i].qty=val; }
+  else { entryState[tab][i].qty=val; updateGalPreview(tab,i); }
+}
+
+// ═══════════════════════════════════════════════
+// CONTAINER TOGGLE
+// ═══════════════════════════════════════════════
+function ctoggleHTML(tab,i,ct){
+  const base='padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer;border-radius:7px;white-space:nowrap;line-height:1.3;text-align:center;';
+  const sel=base+'background:#8B1A1A;color:#fff;border:2px solid #6B1313;';
+  const unsel=base+'background:#F2F3F5;color:#5A6270;border:2px solid #E0E0E0;';
+  return `<div style="display:flex;gap:5px;" id="ctog-${tab}-${i}">
+    <button type="button" style="${ct==='drum'?sel:unsel}" id="ctbtn-${tab}-${i}-drum" onclick="setCtype('${tab}',${i},'drum')">30 Gal<br>Drum</button>
+    <button type="button" style="${ct==='ez'?sel:unsel}" id="ctbtn-${tab}-${i}-ez" onclick="setCtype('${tab}',${i},'ez')">EasyChem<br>Container</button>
+  </div>`;
+}
+function setCtype(tab,i,ct){
+  entryState[tab][i].ctype=ct;
+  const base='padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer;border-radius:7px;white-space:nowrap;line-height:1.3;text-align:center;';
+  const sel=base+'background:#8B1A1A;color:#fff;border:2px solid #6B1313;';
+  const unsel=base+'background:#F2F3F5;color:#5A6270;border:2px solid #E0E0E0;';
+  const d=document.getElementById('ctbtn-'+tab+'-'+i+'-drum');
+  const e=document.getElementById('ctbtn-'+tab+'-'+i+'-ez');
+  if(d)d.setAttribute('style',ct==='drum'?sel:unsel);
+  if(e)e.setAttribute('style',ct==='ez'?sel:unsel);
+  updateGalPreview(tab,i);
+}
+function updateGalPreview(tab,i){
+  const st=entryState[tab][i];
+  const el=document.getElementById('gp-'+tab+'-'+i);
+  if(el)el.textContent=(st.qty*galPerUnit(st.ctype)).toFixed(1)+' gal';
+}
+
+// ═══════════════════════════════════════════════
+// BUILD ENTRY ROWS
+// ═══════════════════════════════════════════════
+function buildTankRows(){
+  const c=document.getElementById('rows-tank'); c.innerHTML='';
+  DETS.forEach((name,i)=>{
+    const dc=DET_COLORS[i];
+    const div=document.createElement('div'); div.className='entry-card';
+    div.innerHTML=`<span class="entry-det-badge" style="background:${dc.bg};color:${dc.text}">${name}</span>${stepperHTML('qn-tank-'+i,'0',0.5,1)}`;
+    c.appendChild(div);
+  });
+}
+function parseCarsPaste(){
+  const raw=(document.getElementById('cars-paste').value||'');
+  const status=document.getElementById('cars-paste-status');
+  if(!raw.trim()){ status.textContent=''; return; }
+  // Wash Details rows: Name <tab/spaces> ControllerCount <tab> POPCount <tab> Difference ...
+  const sums={works:0,ultimate:0,super:0,quality:0};
+  let pastedTotal=null, matched=0, defaultCars=0;
+  raw.split(/\r?\n/).forEach(line=>{
+    const parts=line.split(/\t|\s{2,}/).map(s=>s.trim()).filter(Boolean);
+    if(parts.length<2) return;
+    const name=parts[0].toLowerCase();
+    const count=parseInt(String(parts[1]).replace(/[^0-9-]/g,''));
+    if(isNaN(count)) return;
+    if(name==='total'){ pastedTotal=count; return; }
+    if(name==='default'){ defaultCars+=count; return; }   // occasional controller row — tracked but not a package
+    for(const key of ['works','ultimate','super','quality']){
+      if(name===key||name===key+' club'){ sums[key]+=count; matched++; return; }
+    }
+  });
+  if(!matched){ status.style.color='#922B21'; status.textContent='Could not read any package counts — make sure the whole Wash Details table is copied.'; return; }
+  const counts=[sums.works,sums.ultimate,sums.super,sums.quality];
+  PACKAGES.forEach((_,p)=>{ const el=document.getElementById('qn-cars-'+p); if(el)el.value=counts[p]; });
+  updateCarsPreview();
+  const total=counts.reduce((a,b)=>a+b,0);
+  const reconciled=total+defaultCars;   // Default rows count toward the manager app's Total
+  const defNote=defaultCars?(' (+'+defaultCars+' Default, not assigned to a package)'):'';
+  if(pastedTotal!==null&&pastedTotal!==reconciled){
+    status.style.color='#935116';
+    status.textContent='Parsed '+reconciled+' cars (Works '+counts[0]+', Ultimate '+counts[1]+', Super '+counts[2]+', Quality '+counts[3]+defNote+') — but the pasted Total row says '+pastedTotal+'. Please double-check.';
+  } else {
+    status.style.color='#1A6B3C';
+    status.textContent='\u2713 Parsed '+reconciled+' cars — Works '+counts[0]+', Ultimate '+counts[1]+', Super '+counts[2]+', Quality '+counts[3]+defNote+(pastedTotal!==null?' (matches Total row)':'');
+  }
+}
+
+function buildCarsRows(){
+  const c=document.getElementById('rows-cars'); c.innerHTML='';
+  const pk=['#CF202F','#1B3A6B','#5A6270','#7B2D00'];
+  PACKAGES.forEach((name,p)=>{
+    const div=document.createElement('div'); div.className='entry-card';
+    div.innerHTML=`<span class="entry-det-badge" style="background:${pk[p]};color:#fff">${name}</span>${stepperHTML('qn-cars-'+p,'0',1,0)}`;
+    c.appendChild(div);
+  });
+  updateCarsPreview();
+}
+function updateCarsPreview(){
+  const el=document.getElementById('cars-preview'); if(!el)return;
+  const counts=PACKAGES.map((_,p)=>parseInt((document.getElementById('qn-cars-'+p)||{}).value)||0);
+  const total=counts.reduce((a,b)=>a+b,0);
+  if(!total){ el.innerHTML='Enter package counts to preview expected detergent usage.'; return; }
+  const gals=calcFromCars(counts);
+  el.innerHTML='<b>'+total+' cars</b> → expected usage: '+
+    DETS.map((n,i)=>gals[i]>0?n.split(' #')[0]+' '+gals[i].toFixed(2):null).filter(Boolean).join(' · ')+' gal';
+}
+
+function buildOhRows(tab){
+  const c=document.getElementById('rows-'+tab); c.innerHTML='';
+  DETS.forEach((name,i)=>{
+    const st=entryState[tab][i];
+    const dc=DET_COLORS[i];
+    const gal=(st.qty*galPerUnit(st.ctype)).toFixed(1);
+    const div=document.createElement('div'); div.className='entry-card-oh';
+    div.innerHTML=`
+      <span class="entry-det-badge" style="background:${dc.bg};color:${dc.text}">${name}</span>
+      ${stepperHTML('qn-'+tab+'-'+i,'0',1,0)}
+      <div class="oh-right">
+        ${ctoggleHTML(tab,i,st.ctype)}
+        <span class="gal-tag" id="gp-${tab}-${i}">${gal} gal</span>
+      </div>`;
+    c.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// SAVE ENTRY
+// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// ENTRY GUARDS — catch duplicates and data errors before they save
+// ═══════════════════════════════════════════════
+function prevDateBefore(date){
+  const ds=allDates().filter(d=>d<date);
+  return ds.length?ds[ds.length-1]:null;
+}
+// Guard 1: delivery identical to the previous recorded delivery day
+function guardDupDelivery(date, gals){
+  const ds=Object.keys(DB.delivery||{}).filter(d=>d<date).sort();
+  if(!ds.length) return null;
+  const prev=ds[ds.length-1], pr=DB.delivery[prev]||{};
+  const anyQty=gals.some(g=>g>0);
+  if(!anyQty) return null;
+  const identical=DETS.every((_,i)=>Math.abs((pr[i]||0)-(gals[i]||0))<0.01);
+  if(identical) return 'This delivery is IDENTICAL to the one recorded on '+prev+' (same amounts for every detergent). Double-entered deliveries have caused data problems before.';
+  return null;
+}
+// Guard 2: date already has an entry for this area
+function guardOverwrite(tab, date){
+  const key=tab==='tank'?'tank':tab==='onhand'?'onhand':'delivery';
+  if(DB[key] && DB[key][date]!==undefined){
+    const label=tab==='tank'?'Pod Tank':tab==='onhand'?'Inventory':'Delivery';
+    return label+' already has an entry for '+date+'. Saving again REPLACES it on this iPad but ADDS EXTRA ROWS in the cloud workbook.';
+  }
+  return null;
+}
+// Guard 3: implausible inventory jumps (gain without delivery / extreme drop)
+function guardInventoryJumps(date, gals){
+  const prev=prevDateBefore(date);
+  if(!prev) return null;
+  const issues=[];
+  DETS.forEach((name,i)=>{
+    const before=(DB.onhand[prev]||{})[i];
+    if(before===undefined) return;
+    const after=gals[i];
+    const delivered=((DB.delivery[date]||{})[i])||0;
+    const gain=after-before;
+    if(gain>delivered+0.01) issues.push(name+': up '+fmt(gain,1)+' gal but only '+fmt(delivered,1)+' gal delivered that day');
+    const med=trailingMedianDet(i,prev)||0;
+    if(-gain>Math.max(60,med*4+30)) issues.push(name+': dropped '+fmt(-gain,1)+' gal in one day (typical usage ~'+fmt(med,1)+')');
+  });
+  return issues.length?('Unusual inventory changes:\n• '+issues.join('\n• ')):null;
+}
+// Guard 4: implied daily usage far outside the normal range
+function guardUsageAnomalies(tab, date, vals){
+  const prev=prevDateBefore(date);
+  if(!prev) return null;
+  const issues=[];
+  DETS.forEach((name,i)=>{
+    // hypothetical total gallons for this date if this save goes through
+    const tk = tab==='tank' ? vals[i] : ((DB.tank[date]||{})[i]);
+    const oh = tab==='onhand' ? vals[i] : ((DB.onhand[date]||{})[i]);
+    if(tk===undefined||oh===undefined) return;   // other half not entered yet — can't judge
+    const delivered=((DB.delivery[date]||{})[i])||0;
+    const usage=totalGalDet(i,prev)-((tk+oh)-delivered);
+    const med=trailingMedianDet(i,prev);
+    if(med===null) return;
+    if(usage<-0.5) issues.push(name+': implied usage is negative ('+fmt(usage,1)+' gal) — are you sure your readings are correct?');
+    else if(med>0.3&&usage>med*3+10) issues.push(name+': implies '+fmt(usage,1)+' gal used vs typical '+fmt(med,1)+' — very high');
+  });
+  return issues.length?('Implied daily usage looks off:\n• '+issues.join('\n• ')):null;
+}
+function runGuards(tab, date, gals, vals){
+  const warnings=[];
+  const ow=guardOverwrite(tab,date); if(ow)warnings.push(ow);
+  if(tab==='delivery'){ const d=guardDupDelivery(date,gals); if(d)warnings.push(d); }
+  if(tab==='onhand'){ const j=guardInventoryJumps(date,gals); if(j)warnings.push(j); }
+  const u=guardUsageAnomalies(tab,date,vals); if(u)warnings.push(u);
+  if(!warnings.length) return true;
+  return confirm('\u26A0 PLEASE REVIEW BEFORE SAVING\n\n'+warnings.join('\n\n')+'\n\nSave anyway?');
+}
+
+function saveEntry(tab){
+  const date=document.getElementById('date-'+tab).value;
+  if(!date){ showToast('Please select a date'); return; }
+
+  if(tab==='cars'){
+    const counts=PACKAGES.map((_,p)=>parseInt(document.getElementById('qn-cars-'+p).value)||0);
+    const total=counts.reduce((a,b)=>a+b,0);
+    const warnings=[];
+    if((DB.cars||{})[date]!==undefined) warnings.push('Cars Washed already has an entry for '+date+'. Saving again REPLACES it on this iPad but ADDS EXTRA ROWS in the cloud workbook.');
+    if(total===0) warnings.push('Total cars is ZERO — save anyway?');
+    if(total>2500) warnings.push('Total cars is '+total+' — that is unusually high, please double-check.');
+    if(warnings.length && !confirm('\u26A0 PLEASE REVIEW BEFORE SAVING\n\n'+warnings.join('\n\n')+'\n\nSave anyway?')){ showToast('Save canceled'); return; }
+    DB.cars=DB.cars||{}; DB.cars[date]=counts;
+    const gals=calcFromCars(counts);
+    DB.calc=DB.calc||{}; DB.calc[date]={};
+    DETS.forEach((_,i)=>{ DB.calc[date][i]=gals[i]; });
+    const newLogs=PACKAGES.map((name,p)=>({date,det:name,area:'Cars Washed',qty:counts[p],meas:'Cars',gal:0,color:'#5A6270'}));
+    DB.log=[...newLogs,...(DB.log||[])];
+    const rows=PACKAGES.map((name,p)=>[date,name,'Cars Washed',counts[p],'Cars',0])
+      .concat(DETS.map((name,i)=>[date,name,'Calc Usage',gals[i],'Gallons',gals[i]]));
+    sendRows(rows).then(s=>{ if(s==='queued') showToast('Saved locally — will sync to cloud when online'); });
+    PACKAGES.forEach((_,p)=>{ const el=document.getElementById('qn-cars-'+p); if(el)el.value=0; });
+    const pb=document.getElementById('cars-paste'); if(pb){pb.value='';} const ps=document.getElementById('cars-paste-status'); if(ps){ps.textContent='';}
+    updateCarsPreview();
+    saveDB(); rebuildDatePicker(); renderDash(); renderLog();
+    showToast('Cars Washed saved for '+date+' ('+total+' cars)');
+    return;
+  }
+
+  if(tab==='tank'){
+    // read inputs first — nothing saves until guards pass
+    const vals=DETS.map((_,i)=>parseFloat(document.getElementById('qn-tank-'+i).value)||0);
+    if(!runGuards('tank',date,vals,vals)){ showToast('Save canceled'); return; }
+    DB.tank[date]={};
+    DETS.forEach((_,i)=>{ entryState.tank[i].qty=vals[i]; DB.tank[date][i]=vals[i]; });
+    const newLogs=DETS.map((name,i)=>({date,det:name,area:'Pod Tank',qty:vals[i],meas:'Gallons',gal:vals[i],color:DET_COLORS[i].bg}));
+    DB.log = [...newLogs, ...(DB.log||[])];
+    sendRows(newLogs.map(e=>[e.date,e.det,e.area,e.qty,e.meas,e.gal])).then(s=>{ if(s==='queued') showToast('Saved locally — will sync to cloud when online'); });
+    DETS.forEach((_,i)=>{ const el=document.getElementById('qn-tank-'+i); if(el)el.value=0; entryState.tank[i].qty=0; });
+  }
+
+  if(tab==='onhand'||tab==='delivery'){
+    const dbKey=tab==='onhand'?'onhand':'delivery';
+    const qtyKey=tab==='onhand'?'ohqty':'delqty';
+    const ctKey=tab==='onhand'?'ohctype':'delctype';
+    // read inputs first — nothing saves until guards pass
+    const qtys=DETS.map((_,i)=>parseInt(document.getElementById('qn-'+tab+'-'+i).value)||0);
+    const gals=DETS.map((_,i)=>qtys[i]*galPerUnit(entryState[tab][i].ctype));
+    if(!runGuards(tab,date,gals,gals)){ showToast('Save canceled'); return; }
+    DB[dbKey][date]={}; DB[qtyKey][date]={}; DB[ctKey][date]={};
+    const newLogs=[];
+    DETS.forEach((name,i)=>{
+      entryState[tab][i].qty=qtys[i];
+      const st=entryState[tab][i];
+      DB[dbKey][date][i]=gals[i]; DB[qtyKey][date][i]=qtys[i]; DB[ctKey][date][i]=st.ctype;
+      newLogs.push({date,det:name,area:tab==='onhand'?'Inventory':'Delivered',qty:qtys[i],meas:ctypeLabel(st.ctype),gal:gals[i],color:DET_COLORS[i].bg});
+    });
+    DB.log = [...newLogs, ...(DB.log||[])];
+    sendRows(newLogs.map(e=>[e.date,e.det,e.area,e.qty,e.meas,e.gal])).then(s=>{ if(s==='queued') showToast('Saved locally — will sync to cloud when online'); });
+    DETS.forEach((_,i)=>{ entryState[tab][i].qty=0; });
+    buildOhRows(tab);
+  }
+
+  saveDB();
+  rebuildDatePicker();
+  renderDash();
+  renderLog();
+  showToast(`${tab==='tank'?'Pod Tank':tab==='onhand'?'Inventory':'Delivery'} saved for ${date}`);
+}
+
+// ═══════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════
+function renderDash(){
+  const dates=allDates();
+  const pick=document.getElementById('dash-date-pick');
+  if(!dates.length){
+    document.getElementById('det-cards').innerHTML='<div style="padding:1.5rem;color:var(--text-hint);font-size:13px;text-align:center;background:white;border-radius:10px;border:1px solid var(--border)">No data yet — use the entry tabs to log your first day.</div>';
+    return;
+  }
+  const date=pick.value||dates[dates.length-1];
+  const usedDays=Math.min(dates.indexOf(date),7);
+
+  // ── Needs Attention ──
+  const alerts=needsAttention(date);
+  const aw=document.getElementById('attention-wrap');
+  if(!alerts.length){
+    aw.innerHTML=`<div style="background:#D5F5E3;border:1px solid #A9DFBF;border-radius:10px;padding:.7rem .95rem;font-size:13px;font-weight:600;color:#1A6B3C">&#10003; All detergents look good — no supply, refill, or usage issues.</div>`;
+  } else {
+    aw.innerHTML=`<div class="section-title" style="color:#922B21">&#9888; Needs Attention (${alerts.length})</div>`+
+      alerts.map(a=>{
+        const c=DET_COLORS[a.i];
+        const bg=a.sev==='red'?'#FADBD8':'#FDEBD0';
+        const bd=a.sev==='red'?'#F1948A':'#F5CBA7';
+        const tx=a.sev==='red'?'#922B21':'#935116';
+        return `<div style="background:${bg};border:1px solid ${bd};border-radius:10px;padding:.6rem .85rem;margin-bottom:.45rem;display:flex;align-items:center;gap:9px">
+          <span style="width:11px;height:11px;border-radius:3px;background:${c.bg};flex-shrink:0"></span>
+          <span style="font-size:12.5px;color:${tx}"><b>${a.name}:</b> ${a.msg}</span>
+        </div>`;
+      }).join('');
+  }
+
+  const maxOH=Math.max(1,...DETS.map((_,i)=>totalGalDet(i,date)));
+  document.getElementById('det-cards').innerHTML=DETS.map((name,i)=>{
+    const c=DET_COLORS[i];
+    const tk2=(DB.tank[date]||{})[i]||0;
+    const oh2=(DB.onhand[date]||{})[i]||0;
+    const qty=(DB.ohqty[date]||{})[i]||0;
+    const du2=dailyUsageDet(i,date),avg=trailingAvgDet(i,date),d2=dohDet(i,date),cavg=calcAvgDet(i,date);
+    const tot2=totalGalDet(i,date);
+    const pct=Math.max(0,tot2/maxOH*100);
+    const rl2=refillLevel(i,date);                      // dynamic: max(2x 7-day avg usage, static min)
+    const tkScale=rl2*4;                                // bar spans 0 to 4x refill level; tick at 25% = refill line
+    const tkPct=Math.min(100,Math.max(0,tk2/tkScale*100));
+    const tkCol=tk2<rl2?'#C0392B':tk2<rl2*1.5?'#E67E22':'#27AE60';
+    const tkState=tk2<rl2?'now':tk2<rl2*1.5?'soon':'ok';
+    const tkCellCls=tkState==='now'?' fill-now':tkState==='soon'?' fill-soon':'';
+    const tkFlag=tkState==='now'?'<span class="fill-flag now">FILL NOW</span>':tkState==='soon'?'<span class="fill-flag soon">FILL SOON</span>':'';
+    const barCol=pct>50?'#27AE60':pct>20?'#E67E22':'#C0392B';
+    const chipCls=d2===null?'':d2>=20?'doh-g':d2>=7?'doh-m':'doh-r';
+    return `<div class="det-card">
+      <div class="det-card-hdr">
+        <div class="det-swatch" style="background:${c.bg}"></div>
+        <span class="det-card-name">${name}</span>
+        ${d2!==null?`<span class="doh-chip ${chipCls}">${fmt(d2,1)} days</span>`:''}
+      </div>
+      <div class="det-card-stats">
+        <div class="dcs${tkCellCls}"><div class="dcs-label">Pod Tank${tkFlag}</div><div class="dcs-val">${fmt(tk2,1)} gal</div><div class="mini-bar tk"><div class="mini-bar-fill" style="width:${tkPct.toFixed(1)}%;background:${tkCol}"></div><div class="min-tick" style="left:25%"></div></div><div style="font-size:8.5px;color:var(--text-hint);margin-top:2px">refill at ${fmt(rl2,1)} gal</div></div>
+        <div class="dcs"><div class="dcs-label">Total On Hand</div><div class="dcs-val">${fmt(tot2,1)} gal</div><div class="mini-bar"><div class="mini-bar-fill" style="width:${pct.toFixed(1)}%;background:${barCol}"></div></div></div>
+        <div class="dcs"><div class="dcs-label">Containers</div><div class="dcs-val">${qty}</div></div>
+      </div>
+      <div class="det-card-stats2">
+        <div class="dcs"><div class="dcs-label">Daily Usage</div><div class="dcs-val">${du2===null?'—':fmt(du2,1)}</div></div>
+        <div class="dcs"><div class="dcs-label">7-day Avg</div><div class="dcs-val">${avg===null?'—':fmt(avg,1)}</div></div>
+        <div class="dcs"><div class="dcs-label">Expected /day</div><div class="dcs-val">${cavg===null?'—':fmt(cavg,1)}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('dash-note').textContent = usedDays<7
+    ? `Note: averages based on ${usedDays} day(s) of history — will stabilize as more data is logged.`
+    : '7-day trailing averages based on a full 7-day window.';
+
+  drawChart(date);
+}
+
+function drawChart(selDate){
+  // Horizontal bars: days of supply per detergent, most urgent first, 20-day reorder line
+  const el=document.getElementById('doh-chart'); if(!el)return;
+  const MAXD=40;                                   // bar scale: 40+ days = full width
+  const rows=DETS.map((name,i)=>({name,i,d:dohDet(i,selDate)}))
+    .sort((a,b)=>(a.d===null?1e9:a.d)-(b.d===null?1e9:b.d));
+  el.innerHTML=rows.map(r=>{
+    const c=DET_COLORS[r.i];
+    const d=r.d;
+    const pct=d===null?0:Math.min(100,d/MAXD*100);
+    const col=d===null?'#C8CDD4':d<7?'#C0392B':d<20?'#E67E22':'#27AE60';
+    const label=d===null?'—':d.toFixed(1)+' days';
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+      <span style="width:10px;height:10px;border-radius:3px;background:${c.bg};flex-shrink:0"></span>
+      <span style="width:118px;font-size:11px;font-weight:600;color:var(--text);flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</span>
+      <div style="flex:1;height:14px;background:#EAECEF;border-radius:4px;position:relative;overflow:visible">
+        <div style="height:100%;width:${pct.toFixed(1)}%;background:${col};border-radius:4px"></div>
+        <div style="position:absolute;top:-2px;bottom:-2px;left:50%;width:2px;background:#1A1A1A;border-radius:1px" title="20-day reorder line"></div>
+      </div>
+      <span style="width:64px;text-align:right;font-size:11.5px;font-weight:700;color:${col};flex-shrink:0">${label}</span>
+    </div>`;
+  }).join('')+
+  `<div style="display:flex;gap:14px;margin-top:8px;font-size:10px;color:var(--text-hint);font-weight:600">
+    <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#C0392B"></span> under 7</span>
+    <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#E67E22"></span> 7–20 (reorder)</span>
+    <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#27AE60"></span> 20+ healthy</span>
+  </div>`;
+}
+
+function rebuildDatePicker(){
+  const pick=document.getElementById('dash-date-pick'),cur=pick.value;
+  pick.innerHTML='';
+  allDates().forEach(d=>{ const o=document.createElement('option'); o.value=d; o.textContent=d; pick.appendChild(o); });
+  pick.value=allDates().includes(cur)?cur:allDates()[allDates().length-1]||'';
+}
+
+// ═══════════════════════════════════════════════
+// LOG
+// ═══════════════════════════════════════════════
+function renderLog(){
+  const log=DB.log||[];
+  const n=log.length;
+  const dates=new Set(log.map(e=>e.date));
+  document.getElementById('log-stats').innerHTML=`
+    <div class="metric-card"><div class="metric-card-label">Total Entries</div><div class="metric-card-val">${n}</div></div>
+    <div class="metric-card"><div class="metric-card-label">Dates Logged</div><div class="metric-card-val">${dates.size}</div></div>
+    <div class="metric-card"><div class="metric-card-label">Last Entry</div><div class="metric-card-val" style="font-size:14px">${n?log[0].date:'—'}</div></div>`;
+  const body=document.getElementById('log-body');
+  if(!n){ body.innerHTML='<div class="empty-state">No entries yet.</div>'; return; }
+  body.innerHTML=`<table class="ltable">
+    <thead><tr><th>Date</th><th>Detergent</th><th>Area</th><th style="text-align:right">Qty</th><th>Container</th><th style="text-align:right">Gallons</th></tr></thead>
+    <tbody>`+
+    log.slice(0,120).map(e=>{
+      const cls=e.area==='Pod Tank'?'ap-tank':e.area==='Delivered'?'ap-del':'ap-hand';
+      const areaLabel=e.area==='On Hand'?'Inventory':e.area;
+      return `<tr>
+        <td>${e.date}</td>
+        <td><span class="log-det"><span class="log-swatch" style="background:${e.color}"></span>${e.det}</span></td>
+        <td><span class="area-pill ${cls}">${areaLabel}</span></td>
+        <td style="text-align:right;font-weight:600">${e.qty}</td>
+        <td style="color:var(--text-sec)">${e.meas}</td>
+        <td style="text-align:right;font-weight:600">${fmt(e.gal,1)}</td>
+      </tr>`;
+    }).join('')+
+  '</tbody></table>';
+}
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+function switchTab(name){
+  const tabs=['dashboard','tank','onhand','delivery','cars','log'];
+  tabs.forEach(t=>{
+    // Only toggle the hidden class — never touch inline styles,
+    // because the entry tabs rely on style="display:flex" for their layout
+    document.getElementById('tab-'+t).classList.toggle('hidden',t!==name);
+  });
+  document.querySelectorAll('.tab-nav-item').forEach((el,i)=>{
+    el.classList.toggle('active',tabs[i]===name);
+  });
+  if(name==='log') renderLog();
+  if(name==='dashboard') renderDash();
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+document.getElementById('top-date').textContent =
+  new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+
+['tank','onhand','delivery','cars'].forEach(t=>{
+  document.getElementById('date-'+t).value=today();
+});
+
+cloudInit();
+buildTankRows();
+buildCarsRows();
+buildOhRows('onhand');
+buildOhRows('delivery');
+rebuildDatePicker();
+renderDash();
+updateStorageBar();
+
+
+</script>
+</body>
+</html>
