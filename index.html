@@ -135,7 +135,13 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 /* STORAGE INDICATOR */
 .storage-bar{background:rgba(255,255,255,.12);font-size:10px;font-weight:600;color:rgba(255,255,255,.7);padding:3px 1.25rem;letter-spacing:.04em;text-align:right;flex-shrink:0;}
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/msal-browser/2.38.3/msal-browser.min.js" crossorigin="anonymous"></script>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<script>
+// Fallback: if Microsoft's CDN is unreachable, load MSAL from jsDelivr
+if (typeof msal === 'undefined') {
+  document.write('<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"><\/script>');
+}
+</script>
 </head>
 <body>
 <div class="app">
