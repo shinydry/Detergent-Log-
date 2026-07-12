@@ -89,6 +89,8 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 .entry-topbar{background:var(--red);padding:.6rem 1.25rem;font-size:11px;font-weight:700;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .entry-date-bar{display:flex;align-items:center;gap:10px;padding:.75rem 1.25rem;background:var(--white);border-bottom:1px solid var(--border);flex-shrink:0;}
 .entry-date-bar label{font-size:11px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.05em;}
+.zero-btn{font-size:11px;font-weight:700;padding:6px 12px;border:1.5px solid var(--border);border-radius:7px;background:#F8F9FA;color:var(--text-sec);cursor:pointer;flex-shrink:0;text-transform:uppercase;letter-spacing:.04em;}
+.zero-btn:active{background:#EAECEF;}
 .entry-date-bar input[type=date]{font-size:14px;font-weight:600;padding:5px 10px;border:1px solid var(--border);border-radius:7px;background:#F8F9FA;color:var(--text);flex:1;}
 .entry-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .entry-list{padding:.85rem 1rem;display:flex;flex-direction:column;gap:.55rem;}
@@ -152,8 +154,6 @@ if (typeof msal === 'undefined') {
   <div class="topbar-right">
     <button class="clear-btn" id="cloud-btn" onclick="cloudButtonClick()">&#9729; SIGN IN</button>
     <span class="topbar-date" id="top-date"></span>
-    <button class="clear-btn" onclick="exportCSV()">EXPORT CSV</button>
-    <button class="clear-btn" onclick="confirmClearData()">CLEAR DATA</button>
   </div>
 </div>
 <div class="storage-bar" id="storage-bar"></div>
@@ -192,7 +192,7 @@ if (typeof msal === 'undefined') {
 <!-- ═══ POD TANK ═══ -->
 <div id="tab-tank" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
   <div class="entry-topbar">Pod Tank Gallons <span style="opacity:.65;font-weight:400;font-size:10px">&#8644; steps of 0.5</span></div>
-  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-tank" onchange="loadExisting('tank')"></div>
+  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-tank" onchange="loadExisting('tank')"><button class="zero-btn" onclick="zeroAll('tank')">Zero All</button></div>
   <div class="entry-scroll"><div class="entry-list" id="rows-tank"></div></div>
   <div class="save-btn-wrap"><button class="save-btn" onclick="saveEntry('tank')">Save Pod Tank Entry</button></div>
 </div>
@@ -200,7 +200,7 @@ if (typeof msal === 'undefined') {
 <!-- ═══ ON HAND ═══ -->
 <div id="tab-onhand" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
   <div class="entry-topbar">Drums / Containers Inventory <span style="opacity:.65;font-weight:400;font-size:10px">whole numbers</span></div>
-  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-onhand" onchange="loadExisting('onhand')"></div>
+  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-onhand" onchange="loadExisting('onhand')"><button class="zero-btn" onclick="zeroAll('onhand')">Zero All</button></div>
   <div class="entry-scroll"><div class="entry-list" id="rows-onhand"></div></div>
   <div class="save-btn-wrap"><button class="save-btn" onclick="saveEntry('onhand')">Save Inventory Entry</button></div>
 </div>
@@ -208,7 +208,7 @@ if (typeof msal === 'undefined') {
 <!-- ═══ DELIVERED ═══ -->
 <div id="tab-delivery" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
   <div class="entry-topbar">Drums / Containers Delivered <span style="opacity:.65;font-weight:400;font-size:10px">whole numbers</span></div>
-  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-delivery" onchange="loadExisting('delivery')"></div>
+  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-delivery" onchange="loadExisting('delivery')"><button class="zero-btn" onclick="zeroAll('delivery')">Zero All</button></div>
   <div class="entry-scroll"><div class="entry-list" id="rows-delivery"></div></div>
   <div class="save-btn-wrap"><button class="save-btn" onclick="saveEntry('delivery')">Save Delivery Entry</button></div>
 </div>
@@ -216,7 +216,7 @@ if (typeof msal === 'undefined') {
 <!-- ═══ CARS WASHED ═══ -->
 <div id="tab-cars" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
   <div class="entry-topbar">Cars Washed by Package <span style="opacity:.65;font-weight:400;font-size:10px">Club + retail combined</span></div>
-  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-cars" onchange="loadExisting('cars')"></div>
+  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-cars" onchange="loadExisting('cars')"><button class="zero-btn" onclick="zeroAll('cars')">Zero All</button></div>
   <div class="entry-scroll">
     <div style="padding:.85rem 1rem 0">
       <div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:.7rem .9rem">
@@ -373,7 +373,11 @@ async function flushOutbox(){
   updateStorageBar();
 }
 function stampRows(rows){
-  const ts=new Date().toISOString();
+  // Local time with UTC offset (e.g. 2026-07-11T19:32:05-05:00) — reads naturally
+  // in Excel while staying unambiguous and correctly sortable for Power BI dedupe
+  const d=new Date(), p=n=>String(n).padStart(2,'0');
+  const off=-d.getTimezoneOffset(), sign=off>=0?'+':'-', ao=Math.abs(off);
+  const ts=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}${sign}${p(Math.floor(ao/60))}:${p(ao%60)}`;
   return rows.map(r=>r.length>=7?r:[...r,ts]);   // append SavedAt if not already present
 }
 async function sendRows(rows){
@@ -485,47 +489,7 @@ function updateStorageBar() {
   } catch(e){}
 }
 
-function exportCSV(){
-  // One row per date per detergent with all measures — clean import format for SharePoint/Excel/Power BI
-  const rows=[['Date','Detergent','Pod Tank Gal','Containers Inventory','Inventory Gal','Delivered Gal','Total Gal','Daily Usage Gal']];
-  allDates().forEach(d=>{
-    DETS.forEach((name,i)=>{
-      const u=dailyUsageDet(i,d);
-      rows.push([
-        d, name,
-        (DB.tank[d]||{})[i]??'',
-        (DB.ohqty[d]||{})[i]??'',
-        (DB.onhand[d]||{})[i]??'',
-        (DB.delivery[d]||{})[i]??'',
-        totalGalDet(i,d),
-        u===null?'':u.toFixed(2)
-      ]);
-    });
-  });
-  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download='detergent_inventory_'+today()+'.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast('CSV exported — '+(allDates().length)+' days of data');
-}
 
-function confirmClearData() {
-  if (confirm('Clear ALL saved data and reset to sample data? This cannot be undone.')) {
-    localStorage.removeItem(STORAGE_KEY);
-    DB = defaultDB();
-    saveDB();
-    rebuildDatePicker();
-    renderDash();
-    renderLog();
-    showToast('Data cleared — sample data restored');
-  }
-}
 
 // ═══════════════════════════════════════════════
 // HELPERS
@@ -649,6 +613,23 @@ function needsAttention(date){
 // ═══════════════════════════════════════════════
 // When a chosen date already has a saved entry, load its values into the fields
 // so a correction only needs the one wrong number changed — everything else is preserved.
+// One-tap reset of all entry fields to 0 (does not save — just clears the fields)
+function zeroAll(tab){
+  if(tab==='cars'){
+    PACKAGES.forEach((_,p)=>{ const el=document.getElementById('qn-cars-'+p); if(el)el.value=0; });
+    const pb=document.getElementById('cars-paste'); if(pb)pb.value='';
+    const ps=document.getElementById('cars-paste-status'); if(ps)ps.textContent='';
+    updateCarsPreview();
+  } else {
+    DETS.forEach((_,i)=>{
+      entryState[tab][i].qty=0;
+      const el=document.getElementById('qn-'+tab+'-'+i);
+      if(el){ el.value=0; if(tab!=='tank') updateGalPreview(tab,i); }
+    });
+  }
+  showToast('All values set to 0 — nothing saved yet');
+}
+
 function loadExisting(tab){
   const dateEl=document.getElementById('date-'+tab);
   if(!dateEl||!dateEl.value) return;
