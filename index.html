@@ -7,20 +7,25 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Detergent Inventory">
 <title>Detergent Inventory</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --red:#8B1A1A;--red-dark:#6B1313;--bg:#F2F3F5;--white:#FFFFFF;
-  --border:#E0E0E0;--text:#1A1A1A;--text-sec:#5A6270;--text-hint:#9AA0AC;
+  --red:#8B1A1A;--red-dark:#6B1313;--red-bright:#C0392B;--bg:#F4F5F7;--white:#FFFFFF;
+  --border:#E4E6EA;--line:#EEF0F3;--text:#16181D;--text-sec:#4A5160;--text-hint:#8B92A0;
   --green:#27AE60;--amber:#E67E22;--blue:#2980B9;
+  --disp:'Barlow Condensed','Inter',sans-serif;
 }
 html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);}
 .app{display:flex;flex-direction:column;height:100%;max-width:960px;margin:0 auto;background:var(--bg);}
 
 /* HEADER */
-.topbar{background:var(--red);padding:.75rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.topbar-brand{font-size:16px;font-weight:700;color:#fff;letter-spacing:.02em;}
+.topbar{background:linear-gradient(180deg,#8F1C1C 0%,#7A1515 100%);border-bottom:3px solid var(--red-bright);padding:.7rem 1.25rem .65rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.topbar-brand{color:#fff;line-height:1.05;}
+.topbar-brand .eyebrow{display:block;font-size:9.5px;font-weight:700;letter-spacing:.18em;color:rgba(255,255,255,.6);text-transform:uppercase;margin-bottom:2px;}
+.topbar-brand .title{display:block;font-family:var(--disp);font-size:21px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
 .topbar-right{display:flex;align-items:center;gap:12px;}
 .topbar-date{font-size:12px;color:rgba(255,255,255,.8);font-weight:500;}
 .clear-btn{font-size:11px;font-weight:700;color:rgba(255,255,255,.7);background:rgba(255,255,255,.15);border:none;border-radius:6px;padding:4px 9px;cursor:pointer;letter-spacing:.04em;}
@@ -40,7 +45,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 .metric-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem;}
 .metric-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:.85rem .9rem;}
 .metric-card-label{font-size:10px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
-.metric-card-val{font-size:22px;font-weight:700;color:var(--text);line-height:1;}
+.metric-card-val{font-family:var(--disp);font-size:26px;font-weight:600;color:var(--text);line-height:1;}
 .metric-card-sub{font-size:10px;color:var(--text-hint);margin-top:2px;}
 .c-red{color:var(--red)!important;}.c-green{color:var(--green)!important;}.c-amber{color:var(--amber)!important;}.c-blue{color:var(--blue)!important;}
 
@@ -53,16 +58,16 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 
 /* DET CARDS */
 .det-grid{display:flex;flex-direction:column;gap:.55rem;}
-.det-card{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-.det-card-hdr{display:flex;align-items:center;gap:9px;padding:.55rem .85rem;border-bottom:1px solid var(--border);}
+.det-card{background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(22,24,29,.05);}
+.det-card-hdr{display:flex;align-items:center;gap:9px;padding:.6rem .85rem;border-bottom:1px solid var(--line);}
 .det-swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
-.det-card-name{font-size:13px;font-weight:700;color:var(--text);flex:1;}
+.det-card-name{font-size:14.5px;font-weight:700;color:var(--text);flex:1;letter-spacing:-.01em;}
 .det-card-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));}
-.det-card-stats2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--border);}
-.dcs{padding:.45rem .7rem;border-right:1px solid var(--border);}
-.dcs:last-child{border-right:none;}
-.dcs-label{font-size:9px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:1px;}
-.dcs-val{font-size:13px;font-weight:600;color:var(--text);}
+.det-card-stats2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);}
+.dcs{padding:.55rem .85rem .5rem;}
+.dcs-label{font-size:9.5px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px;}
+.dcs-val{font-family:var(--disp);font-size:22px;font-weight:600;color:var(--text);line-height:1.05;}
+.dcs-val .unit{font-size:13px;font-weight:500;color:var(--text-hint);letter-spacing:0;}
 .mini-bar{height:3px;background:#EAECEF;border-radius:2px;overflow:hidden;margin-top:3px;position:relative;}
 .mini-bar.tk{height:5px;overflow:visible;}
 .min-tick{position:absolute;top:-2px;bottom:-2px;width:2px;background:#1A1A1A;border-radius:1px;}
@@ -73,7 +78,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 .fill-flag.now{background:#922B21;color:#fff;}
 .fill-flag.soon{background:#E67E22;color:#fff;}
 .mini-bar-fill{height:100%;border-radius:2px;}
-.doh-chip{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;margin-left:auto;white-space:nowrap;}
+.doh-chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;margin-left:auto;white-space:nowrap;}
 .doh-g{background:#D5F5E3;color:#1A6B3C;}.doh-m{background:#FDEBD0;color:#935116;}.doh-r{background:#FADBD8;color:#922B21;}
 
 /* CHART */
@@ -94,8 +99,8 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 .entry-date-bar input[type=date]{font-size:14px;font-weight:600;padding:5px 10px;border:1px solid var(--border);border-radius:7px;background:#F8F9FA;color:var(--text);flex:1;}
 .entry-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .entry-list{padding:.85rem 1rem;display:flex;flex-direction:column;gap:.55rem;}
-.entry-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:.7rem .9rem;display:grid;grid-template-columns:140px 155px 1fr;align-items:center;gap:10px;}
-.entry-card-oh{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:.7rem .9rem;display:grid;grid-template-columns:140px 155px 1fr;align-items:center;gap:10px;}
+.entry-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:.7rem .9rem;display:grid;grid-template-columns:140px minmax(155px,260px) 1fr;align-items:center;gap:10px;}
+.entry-card-oh{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:.7rem .9rem;display:grid;grid-template-columns:140px minmax(155px,220px) 1fr;align-items:center;gap:10px;}
 .entry-det-badge{font-size:12px;font-weight:700;padding:6px 11px;border-radius:7px;display:inline-block;white-space:nowrap;text-align:center;}
 
 /* STEPPER */
@@ -103,7 +108,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 .step-btn{width:44px;height:44px;flex-shrink:0;border:none;background:transparent;color:var(--text);font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;font-weight:300;line-height:1;}
 .step-btn:active{background:#E0E0E0;}
 .step-div{width:1px;height:60%;background:var(--border);flex-shrink:0;}
-.step-input{flex:1;min-width:0;height:100%;border:none;background:transparent;color:var(--text);font-size:17px;font-weight:700;text-align:center;padding:0;-moz-appearance:textfield;}
+.step-input{flex:1;min-width:0;height:100%;border:none;background:transparent;color:var(--text);font-family:var(--disp);font-size:21px;font-weight:600;text-align:center;padding:0;-moz-appearance:textfield;}
 .step-input::-webkit-outer-spin-button,.step-input::-webkit-inner-spin-button{-webkit-appearance:none;}
 .step-input:focus{outline:none;background:#EFF6FF;}
 
@@ -113,7 +118,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 
 /* SAVE BUTTON */
 .save-btn-wrap{padding:.5rem 1rem 1rem;flex-shrink:0;}
-.save-btn{display:block;width:100%;padding:.95rem;font-size:15px;font-weight:700;background:var(--red);color:#fff;border:none;border-radius:10px;cursor:pointer;letter-spacing:.02em;-webkit-tap-highlight-color:transparent;}
+.save-btn{display:block;width:100%;padding:1rem;font-size:15px;font-weight:700;background:var(--red);color:#fff;border:none;border-radius:12px;cursor:pointer;letter-spacing:.03em;text-transform:uppercase;-webkit-tap-highlight-color:transparent;box-shadow:0 2px 8px rgba(139,26,26,.28);}
 .save-btn:active{background:var(--red-dark);}
 
 /* LOG */
@@ -1011,7 +1016,7 @@ function renderDash(){
         const bg=a.sev==='red'?'#FADBD8':'#FDEBD0';
         const bd=a.sev==='red'?'#F1948A':'#F5CBA7';
         const tx=a.sev==='red'?'#922B21':'#935116';
-        return `<div style="background:${bg};border:1px solid ${bd};border-radius:10px;padding:.6rem .85rem;margin-bottom:.45rem;display:flex;align-items:center;gap:9px">
+        return `<div style="background:${bg};border:1px solid ${bd};border-left:4px solid ${tx};border-radius:10px;padding:.65rem .85rem;margin-bottom:.45rem;display:flex;align-items:center;gap:9px">
           <span style="width:11px;height:11px;border-radius:3px;background:${c.bg};flex-shrink:0"></span>
           <span style="font-size:12.5px;color:${tx}"><b>${a.name}:</b> ${a.msg}</span>
         </div>`;
@@ -1043,8 +1048,8 @@ function renderDash(){
         ${d2!==null?`<span class="doh-chip ${chipCls}">${fmt(d2,1)} days</span>`:''}
       </div>
       <div class="det-card-stats">
-        <div class="dcs${tkCellCls}"><div class="dcs-label">Pod Tank${tkFlag}</div><div class="dcs-val">${fmt(tk2,1)} gal</div><div class="mini-bar tk"><div class="mini-bar-fill" style="width:${tkPct.toFixed(1)}%;background:${tkCol}"></div><div class="min-tick" style="left:25%"></div></div><div style="font-size:8.5px;color:var(--text-hint);margin-top:2px">refill at ${fmt(rl2,1)} gal</div></div>
-        <div class="dcs"><div class="dcs-label">Total On Hand</div><div class="dcs-val">${fmt(tot2,1)} gal</div><div class="mini-bar"><div class="mini-bar-fill" style="width:${pct.toFixed(1)}%;background:${barCol}"></div></div></div>
+        <div class="dcs${tkCellCls}"><div class="dcs-label">Pod Tank${tkFlag}</div><div class="dcs-val">${fmt(tk2,1)}<span class="unit"> gal</span></div><div class="mini-bar tk"><div class="mini-bar-fill" style="width:${tkPct.toFixed(1)}%;background:${tkCol}"></div><div class="min-tick" style="left:25%"></div></div><div style="font-size:8.5px;color:var(--text-hint);margin-top:2px">refill at ${fmt(rl2,1)} gal</div></div>
+        <div class="dcs"><div class="dcs-label">Total On Hand</div><div class="dcs-val">${fmt(tot2,1)}<span class="unit"> gal</span></div><div class="mini-bar"><div class="mini-bar-fill" style="width:${pct.toFixed(1)}%;background:${barCol}"></div></div></div>
         <div class="dcs"><div class="dcs-label">Containers</div><div class="dcs-val">${qty}</div></div>
       </div>
       <div class="det-card-stats2">
