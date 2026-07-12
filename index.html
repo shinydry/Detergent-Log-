@@ -192,7 +192,7 @@ if (typeof msal === 'undefined') {
 <!-- ═══ POD TANK ═══ -->
 <div id="tab-tank" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
   <div class="entry-topbar">Pod Tank Gallons <span style="opacity:.65;font-weight:400;font-size:10px">&#8644; steps of 0.5</span></div>
-  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-tank"></div>
+  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-tank" onchange="loadExisting('tank')"></div>
   <div class="entry-scroll"><div class="entry-list" id="rows-tank"></div></div>
   <div class="save-btn-wrap"><button class="save-btn" onclick="saveEntry('tank')">Save Pod Tank Entry</button></div>
 </div>
@@ -200,7 +200,7 @@ if (typeof msal === 'undefined') {
 <!-- ═══ ON HAND ═══ -->
 <div id="tab-onhand" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
   <div class="entry-topbar">Drums / Containers Inventory <span style="opacity:.65;font-weight:400;font-size:10px">whole numbers</span></div>
-  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-onhand"></div>
+  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-onhand" onchange="loadExisting('onhand')"></div>
   <div class="entry-scroll"><div class="entry-list" id="rows-onhand"></div></div>
   <div class="save-btn-wrap"><button class="save-btn" onclick="saveEntry('onhand')">Save Inventory Entry</button></div>
 </div>
@@ -208,7 +208,7 @@ if (typeof msal === 'undefined') {
 <!-- ═══ DELIVERED ═══ -->
 <div id="tab-delivery" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
   <div class="entry-topbar">Drums / Containers Delivered <span style="opacity:.65;font-weight:400;font-size:10px">whole numbers</span></div>
-  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-delivery"></div>
+  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-delivery" onchange="loadExisting('delivery')"></div>
   <div class="entry-scroll"><div class="entry-list" id="rows-delivery"></div></div>
   <div class="save-btn-wrap"><button class="save-btn" onclick="saveEntry('delivery')">Save Delivery Entry</button></div>
 </div>
@@ -216,7 +216,7 @@ if (typeof msal === 'undefined') {
 <!-- ═══ CARS WASHED ═══ -->
 <div id="tab-cars" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
   <div class="entry-topbar">Cars Washed by Package <span style="opacity:.65;font-weight:400;font-size:10px">Club + retail combined</span></div>
-  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-cars"></div>
+  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-cars" onchange="loadExisting('cars')"></div>
   <div class="entry-scroll">
     <div style="padding:.85rem 1rem 0">
       <div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:.7rem .9rem">
@@ -372,7 +372,12 @@ async function flushOutbox(){
   }catch(e){ /* stays queued */ }
   updateStorageBar();
 }
+function stampRows(rows){
+  const ts=new Date().toISOString();
+  return rows.map(r=>r.length>=7?r:[...r,ts]);   // append SavedAt if not already present
+}
 async function sendRows(rows){
+  rows=stampRows(rows);
   if(!cloudAccount){ queueRows(rows); return 'queued'; }
   try{ await graphAddRows(rows); flushOutbox(); return 'sent'; }
   catch(e){ queueRows(rows); return 'queued'; }
@@ -397,7 +402,7 @@ async function syncHistory(){
   const btn=document.getElementById('sync-hist-btn');
   try{
     for(let i=start;i<rows.length;i+=100){
-      await graphAddRows(rows.slice(i,i+100));
+      await graphAddRows(stampRows(rows.slice(i,i+100)));
       DB.histSyncedCount=Math.min(i+100,rows.length);
       saveDB();
       if(btn) btn.textContent='Syncing… '+DB.histSyncedCount+' / '+rows.length+' rows';
@@ -642,6 +647,49 @@ function needsAttention(date){
 // ═══════════════════════════════════════════════
 // STEPPER
 // ═══════════════════════════════════════════════
+// When a chosen date already has a saved entry, load its values into the fields
+// so a correction only needs the one wrong number changed — everything else is preserved.
+function loadExisting(tab){
+  const dateEl=document.getElementById('date-'+tab);
+  if(!dateEl||!dateEl.value) return;
+  const date=dateEl.value;
+  if(tab==='tank'){
+    const rec=(DB.tank||{})[date];
+    DETS.forEach((_,i)=>{
+      const v=rec?(rec[i]||0):0;
+      entryState.tank[i].qty=v;
+      const el=document.getElementById('qn-tank-'+i); if(el)el.value=v;
+    });
+    if(rec) showToast('Loaded saved Pod Tank values for '+date+' — edit what needs correcting, then save');
+  } else if(tab==='onhand'||tab==='delivery'){
+    const dbKey=tab==='onhand'?'onhand':'delivery';
+    const qtyKey=tab==='onhand'?'ohqty':'delqty';
+    const ctKey=tab==='onhand'?'ohctype':'delctype';
+    const gals=(DB[dbKey]||{})[date], q=(DB[qtyKey]||{})[date], c=(DB[ctKey]||{})[date];
+    DETS.forEach((_,i)=>{
+      const ct=(c&&c[i])?c[i]:DET_CTYPE[i];
+      entryState[tab][i].ctype=ct;
+      let qty=0;
+      if(q&&q[i]!==undefined) qty=q[i];
+      else if(gals&&gals[i]) qty=Math.round(gals[i]/galPerUnit(ct)*100)/100;  // historical data stored gallons only
+      entryState[tab][i].qty=qty;
+    });
+    buildOhRows(tab);
+    DETS.forEach((_,i)=>{
+      const el=document.getElementById('qn-'+tab+'-'+i);
+      if(el){ el.value=entryState[tab][i].qty; updateGalPreview(tab,i); }
+    });
+    if(gals) showToast('Loaded saved values for '+date+' — edit what needs correcting, then save');
+  } else if(tab==='cars'){
+    const rec=(DB.cars||{})[date];
+    PACKAGES.forEach((_,p)=>{
+      const el=document.getElementById('qn-cars-'+p); if(el)el.value=rec?(rec[p]||0):0;
+    });
+    updateCarsPreview();
+    if(rec) showToast('Loaded saved car counts for '+date+' — edit what needs correcting, then save');
+  }
+}
+
 function stepperHTML(id,val,step,dec){
   return `<div class="stepper">
     <button class="step-btn" onclick="stepChange('${id}',${step},-1,${dec})">&#8722;</button>
