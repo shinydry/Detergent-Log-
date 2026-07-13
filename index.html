@@ -155,7 +155,7 @@ if (typeof msal === 'undefined') {
 
 <!-- HEADER -->
 <div class="topbar">
-  <span class="topbar-brand">&#9670; Detergent Inventory</span>
+  <span class="topbar-brand"><span class="eyebrow">Tommy&#8217;s Express &middot; NE43</span><span class="title">Detergent Inventory</span></span>
   <div class="topbar-right">
     <button class="clear-btn" id="cloud-btn" onclick="cloudButtonClick()">&#9729; SIGN IN</button>
     <span class="topbar-date" id="top-date"></span>
@@ -170,6 +170,7 @@ if (typeof msal === 'undefined') {
   <div class="tab-nav-item" onclick="switchTab('onhand')">&#9723; Inventory</div>
   <div class="tab-nav-item" onclick="switchTab('delivery')">&#9651; Delivered</div>
   <div class="tab-nav-item" onclick="switchTab('cars')">&#128663; Cars</div>
+  <div class="tab-nav-item" onclick="switchTab('order')">&#128230; Order</div>
   <div class="tab-nav-item" onclick="switchTab('log')">&#9776; Log</div>
 </div>
 
@@ -234,6 +235,31 @@ if (typeof msal === 'undefined') {
     <div style="padding:0 1rem 1rem"><div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:.7rem .9rem;font-size:12px;color:var(--text-sec)" id="cars-preview"></div></div>
   </div>
   <div class="save-btn-wrap"><button class="save-btn" onclick="saveEntry('cars')">Save Cars Washed</button></div>
+</div>
+
+<!-- ═══ ORDER ANALYSIS ═══ -->
+<div id="tab-order" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+  <div class="entry-topbar">Order Analysis <span style="opacity:.65;font-weight:400;font-size:10px">Free-shipping skid builder</span></div>
+  <div class="entry-date-bar">
+    <label>Reorder at</label>
+    <select id="order-trigger" onchange="orderReset()" style="font-size:14px;font-weight:600;padding:6px 10px;border:1px solid var(--border);border-radius:7px;background:#F8F9FA;color:var(--text);">
+      <option value="15">15 days</option>
+      <option value="20" selected>20 days</option>
+      <option value="25">25 days</option>
+    </select>
+    <label>Order</label>
+    <select id="order-tranche" onchange="orderReset()" style="font-size:14px;font-weight:600;padding:6px 10px;border:1px solid var(--border);border-radius:7px;background:#F8F9FA;color:var(--text);">
+      <option value="5">+5 days</option>
+      <option value="7" selected>+7 days</option>
+      <option value="10">+10 days</option>
+      <option value="14">+14 days</option>
+    </select>
+    <button class="zero-btn" onclick="orderReset()">Reset to Suggested</button>
+  </div>
+  <div class="entry-scroll">
+    <div class="entry-list" id="rows-order"></div>
+    <div style="padding:0 1rem 1rem" id="order-plan"></div>
+  </div>
 </div>
 
 <!-- ═══ LOG ═══ -->
@@ -314,14 +340,16 @@ function cloudInit(){
       if(resp && resp.account){ cloudAccount = resp.account; }
       else { const accts = msalApp.getAllAccounts(); if(accts.length) cloudAccount = accts[0]; }
       setCloudBtn(cloudAccount?'in':'out');
-      if(cloudAccount) flushOutbox();
+      if(cloudAccount){ flushOutbox().then(()=>cloudPullAll(true)); }
     }).catch(()=>setCloudBtn('out'));
   }catch(e){ setCloudBtn('offline'); }
 }
 function cloudButtonClick(){
   if(!msalApp){ showToast('Cloud unavailable — check internet connection'); return; }
   if(cloudAccount){
-    if(confirm('Signed in as '+(cloudAccount.username||'work account')+'. Sign out?')){
+    if(confirm('Pull the latest data from the cloud workbook now?')){
+      cloudPullAll(false);
+    } else if(confirm('Sign out of '+(cloudAccount.username||'this work account')+'?')){
       msalApp.logoutRedirect({account:cloudAccount});
     }
   } else {
@@ -384,6 +412,72 @@ function stampRows(rows){
   const off=-d.getTimezoneOffset(), sign=off>=0?'+':'-', ao=Math.abs(off);
   const ts=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}${sign}${p(Math.floor(ao/60))}:${p(ao%60)}`;
   return rows.map(r=>r.length>=7?r:[...r,ts]);   // append SavedAt if not already present
+}
+// ── CLOUD PULL: make this device match the workbook (the shared source of truth) ──
+function excelSerialToISO(n){
+  // dates written by Excel itself can arrive as serial numbers
+  const ms=Math.round((n-25569)*86400000);
+  return new Date(ms).toISOString().slice(0,10);
+}
+async function graphGetAllRows(){
+  const token=await getToken();
+  if(!token) throw new Error('no-token');
+  let url='https://graph.microsoft.com/v1.0/drives/'+CLOUD.driveId+'/items/'+CLOUD.itemId+
+          '/workbook/tables/'+CLOUD.table+'/rows?$select=values';
+  const rows=[];
+  while(url){
+    const resp=await fetch(url,{headers:{'Authorization':'Bearer '+token}});
+    if(!resp.ok) throw new Error('graph-'+resp.status);
+    const data=await resp.json();
+    (data.value||[]).forEach(r=>{ if(r.values&&r.values[0]) rows.push(r.values[0]); });
+    url=data['@odata.nextLink']||null;
+  }
+  return rows;
+}
+async function cloudPullAll(silent){
+  if(!cloudAccount){ if(!silent) showToast('Sign in first'); return false; }
+  if((DB.outbox||[]).length){ await flushOutbox(); if((DB.outbox||[]).length){ if(!silent) showToast('Unsent entries are still queued — pull skipped to protect them'); return false; } }
+  let raw;
+  try{ raw=await graphGetAllRows(); }
+  catch(e){ if(!silent) showToast('Could not reach the cloud workbook'); return false; }
+  // latest SavedAt wins per (date, item, area) — identical rule to Power BI
+  const best={};
+  raw.forEach(r=>{
+    let [ed,det,area,qty,ct,gal,saved]=r;
+    if(ed===null||ed===undefined||det===undefined||area===undefined) return;
+    if(typeof ed==='number') ed=excelSerialToISO(ed);
+    ed=String(ed).slice(0,10);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(ed)) return;
+    const key=ed+'|'+det+'|'+area;
+    const ts=saved?String(saved):'0000';
+    if(!best[key]||ts>String(best[key].ts)) best[key]={ed,det,area,qty:Number(qty)||0,ct:ct||'',gal:Number(gal)||0,ts};
+  });
+  // rebuild the derived stores fresh from the deduped cloud rows
+  const nb={tank:{},onhand:{},ohqty:{},ohctype:{},delivery:{},delqty:{},delctype:{},cars:{},calc:{}};
+  const ctKey=s=>s==='30 Gal Drum'?'drum':s==='EasyChem Container'?'ez':null;
+  Object.values(best).forEach(x=>{
+    const di=DETS.indexOf(x.det), pi=PACKAGES.indexOf(x.det);
+    if(x.area==='Pod Tank'&&di>=0){ (nb.tank[x.ed]=nb.tank[x.ed]||{})[di]=x.gal; }
+    else if(x.area==='Inventory'&&di>=0){
+      (nb.onhand[x.ed]=nb.onhand[x.ed]||{})[di]=x.gal;
+      (nb.ohqty[x.ed]=nb.ohqty[x.ed]||{})[di]=x.qty;
+      const c=ctKey(x.ct); if(c) (nb.ohctype[x.ed]=nb.ohctype[x.ed]||{})[di]=c;
+    }
+    else if(x.area==='Delivered'&&di>=0){
+      (nb.delivery[x.ed]=nb.delivery[x.ed]||{})[di]=x.gal;
+      (nb.delqty[x.ed]=nb.delqty[x.ed]||{})[di]=x.qty;
+      const c=ctKey(x.ct); if(c) (nb.delctype[x.ed]=nb.delctype[x.ed]||{})[di]=c;
+    }
+    else if(x.area==='Cars Washed'&&pi>=0){ (nb.cars[x.ed]=nb.cars[x.ed]||[0,0,0,0])[pi]=x.qty; }
+    else if(x.area==='Calc Usage'&&di>=0){ (nb.calc[x.ed]=nb.calc[x.ed]||{})[di]=x.gal; }
+  });
+  ['tank','onhand','ohqty','ohctype','delivery','delqty','delctype','cars','calc'].forEach(k=>{ DB[k]=nb[k]; });
+  saveDB();
+  rebuildDatePicker();
+  renderDash();
+  renderLog();
+  if(!silent) showToast('Synced from cloud — this device now matches the workbook');
+  return true;
 }
 async function sendRows(rows){
   rows=stampRows(rows);
@@ -589,14 +683,156 @@ function refillLevel(i,date){
   const twoDay=(avg!==null&&avg>0)?2*avg:0;
   return Math.max(twoDay, MIN_LEVEL[i]);
 }
+// How many whole containers to add to get back above the refill level.
+// Whole-unit rounding lands at "2 days + a bit" — tanks stay lean without daily refill churn.
+function refillSuggestion(i,date){
+  const tk=(DB.tank[date]||{})[i];
+  if(tk===undefined) return null;
+  const rl=refillLevel(i,date);
+  if(tk>=rl) return null;
+  // Drums: whole 30-gal drums. EasyChem: whole BOXES (2 jugs x 2.5 gal = 5 gal) —
+  // boxes always go in complete, so no loose jugs sit in storage.
+  const ct=DET_CTYPE[i];
+  const unit=ct==='drum'?30:5;
+  const n=Math.max(1,Math.ceil((rl-tk)/unit));
+  const resulting=tk+n*unit;
+  const avg=trailingAvgDet(i,date);
+  const days=(avg&&avg>0)?resulting/avg:null;
+  const noun=ct==='drum'?'drum':'box';
+  return {n,unit,resulting,days,label:n+' '+(n>1?(noun==='box'?'boxes':'drums'):noun)};
+}
+// ═══════════════════════════════════════════════
+// ORDER ANALYSIS — free-shipping skid builder
+// Supplier rule: every skid must match one of these recipes (EZ Chem counted in BOXES):
+//   drums: 5 -> 0-4 boxes | 4 -> 2-8 | 3 -> 6-12 | 2 -> 18-24 | 1 -> 24-30 | 0 -> exactly 36
+// ═══════════════════════════════════════════════
+const SKID_RULES = {5:[0,4], 4:[2,8], 3:[6,12], 2:[18,24], 1:[24,30], 0:[36,36]};
+const LEAD_BIZ_DAYS = 4;   // supplier shipping: 4 BUSINESS days (weekends wash cars but don't ship)
+
+// Arrival if ordered on a given date: weekend orders process Monday, then +4 business days
+function orderArrival(fromDate){
+  const d=new Date(fromDate+'T12:00:00');
+  while(d.getDay()===0||d.getDay()===6) d.setDate(d.getDate()+1);   // weekend order -> processes Monday
+  let biz=0;
+  while(biz<LEAD_BIZ_DAYS){
+    d.setDate(d.getDate()+1);
+    if(d.getDay()!==0&&d.getDay()!==6) biz++;
+  }
+  const arrive=d.toISOString().slice(0,10);
+  const cal=Math.round((new Date(arrive)-new Date(fromDate))/86400000);   // calendar days of consumption
+  return {date:arrive, calDays:cal};
+}
+const ORDER_UNIT_GAL = i => DET_CTYPE[i]==='drum' ? 30 : 5;   // drums vs BOXES (2 jugs)
+const ORDER_UNIT_NAME = (i,n) => DET_CTYPE[i]==='drum' ? (n===1?'drum':'drums') : (n===1?'box':'boxes');
+
+// Reorder policy: when a detergent is at/below the trigger (days of supply),
+// order a tranche of N more days. Above the trigger: order nothing —
+// the skid top-up logic pre-orders the next-soonest detergents when composition requires it.
+function orderNeeds(trigger, tranche, date){
+  return DETS.map((name,i)=>{
+    const avg=trailingAvgDet(i,date)||0;
+    const days=dohDet(i,date);
+    let units=0;
+    if(avg>0 && days!==null && days<=trigger){
+      units=Math.ceil(tranche*avg/ORDER_UNIT_GAL(i));
+    }
+    return {i,name,avg,units};
+  });
+}
+function daysAfter(i,date,units){
+  const avg=trailingAvgDet(i,date)||0;
+  if(avg<=0) return null;
+  return (totalGalDet(i,date)+units*ORDER_UNIT_GAL(i))/avg;
+}
+
+// Find the skid plan covering D drums + E boxes with the least extra product.
+// Searches skid-count compositions (each skid 0-5 drums); boxes padded to per-plan minimum.
+function planSkids(D,E){
+  if(D===0&&E===0) return {none:true};
+  if(D>60||E>240) return null;   // sanity cap — beyond any realistic order, avoids runaway search
+  let best=null;
+  const maxK=Math.ceil(D/5)+Math.ceil(E/36)+2;
+  function explore(k, idx, remaining, drums){   // compositions of drum counts, non-increasing
+    if(remaining===0||idx===k){
+      if(remaining>0) return;
+      const Dp=drums.reduce((a,b)=>a+b,0);
+      if(Dp<D) return;
+      let minE=0,maxE=0;
+      drums.forEach(d=>{minE+=SKID_RULES[d][0];maxE+=SKID_RULES[d][1];});
+      if(maxE<E) return;
+      const Ep=Math.max(E,minE);
+      const extraGal=(Dp-D)*30+(Ep-E)*5;
+      const cand={k,drums:[...drums],Dp,Ep,minE,maxE,extraD:Dp-D,extraE:Ep-E,extraGal};
+      if(!best||extraGal<best.extraGal||(extraGal===best.extraGal&&k<best.k)) best=cand;
+      return;
+    }
+    const cap=idx===0?5:drums[idx-1];           // non-increasing to avoid duplicate multisets
+    for(let d=Math.min(5,cap);d>=0;d--){ drums.push(d); explore(k,idx+1,remaining-1,drums); drums.pop(); }
+  }
+  for(let k=1;k<=maxK;k++){
+    // seed: allow total slots k; remaining counts slots to fill
+    (function go(idx,drums){
+      if(idx===k){
+        const Dp=drums.reduce((a,b)=>a+b,0);
+        if(Dp<D) return;
+        let minE=0,maxE=0;
+        drums.forEach(d=>{minE+=SKID_RULES[d][0];maxE+=SKID_RULES[d][1];});
+        if(maxE<E) return;
+        const Ep=Math.max(E,minE);
+        const extraGal=(Dp-D)*30+(Ep-E)*5;
+        const cand={k,drums:[...drums],Dp,Ep,minE,maxE,extraD:Dp-D,extraE:Ep-E,extraGal};
+        if(!best||extraGal<best.extraGal||(extraGal===best.extraGal&&k<best.k)) best=cand;
+        return;
+      }
+      const cap=idx===0?5:drums[idx-1];
+      for(let d=cap;d>=0;d--){ drums.push(d); go(idx+1,drums); drums.pop(); }
+    })(0,[]);
+    if(best&&best.extraGal===0) break;          // perfect fit found — no cheaper possible
+  }
+  if(!best) return null;
+  // Allocate boxes across skids: fill each skid's minimum, then pour the rest into capacity
+  const alloc=best.drums.map(d=>SKID_RULES[d][0]);
+  let pool=best.Ep-alloc.reduce((a,b)=>a+b,0);
+  for(let s=0;s<alloc.length&&pool>0;s++){
+    const cap=SKID_RULES[best.drums[s]][1]-alloc[s];
+    const put=Math.min(cap,pool); alloc[s]+=put; pool-=put;
+  }
+  best.boxAlloc=alloc;
+  return best;
+}
+
+// Spread extra units across detergents of that type, always topping up whoever
+// will run out soonest — padding becomes future stock, never waste.
+function distributeExtras(needs, date, extraD, extraE){
+  const adds=DETS.map(()=>0);
+  function give(count, type){
+    for(let n=0;n<count;n++){
+      let bi=-1, bd=Infinity;
+      DETS.forEach((_,i)=>{
+        if(DET_CTYPE[i]!==type) return;
+        const d=daysAfter(i,date,needs[i].units+adds[i]);
+        const score=d===null?Infinity-1:d;      // zero-usage detergents only as last resort
+        if(score<bd){bd=score;bi=i;}
+      });
+      if(bi>=0) adds[bi]++;
+    }
+  }
+  give(extraD,'drum'); give(extraE,'ez');
+  return adds;
+}
 function needsAttention(date){
   const alerts=[];
   DETS.forEach((name,i)=>{
     const d=dohDet(i,date);
-    if(d!==null&&d<20) alerts.push({type:'low',i,name,msg:`${d.toFixed(1)} days of supply left — reorder`,sev:d<7?'red':'amber'});
+    // red = may not survive the shipping window (worst case ~6 calendar days + safety)
+    if(d!==null&&d<20) alerts.push({type:'low',i,name,msg:`${d.toFixed(1)} days of supply left — ${d<10?'order today (4-business-day shipping)':'reorder'}`,sev:d<10?'red':'amber'});
     const tk=(DB.tank[date]||{})[i];
     const rl=refillLevel(i,date);
-    if(tk!==undefined&&tk<rl) alerts.push({type:'tank',i,name,msg:`Pod tank at ${fmt(tk,1)} gal (refill level ${fmt(rl,1)}) — refill`,sev:'red'});
+    if(tk!==undefined&&tk<rl){
+      const rs=refillSuggestion(i,date);
+      const add=rs?` — add ${rs.label} (→ ${fmt(rs.resulting,1)} gal${rs.days?', ≈'+fmt(rs.days,1)+' days':''})`:' — refill';
+      alerts.push({type:'tank',i,name,msg:`Pod tank at ${fmt(tk,1)} gal (refill level ${fmt(rl,1)})${add}`,sev:'red'});
+    }
     const act=trailingMedianDet(i,date), calc=calcMedianDet(i,date), base=baselineRatio(i,date);
     if(act!==null&&calc!==null&&base!==null&&calc>=VARIANCE_MIN_GAL){
       const expected=calc*base;           // what "normal" looks like for THIS detergent
@@ -1039,6 +1275,7 @@ function renderDash(){
     const tkState=tk2<rl2?'now':tk2<rl2*1.5?'soon':'ok';
     const tkCellCls=tkState==='now'?' fill-now':tkState==='soon'?' fill-soon':'';
     const tkFlag=tkState==='now'?'<span class="fill-flag now">FILL NOW</span>':tkState==='soon'?'<span class="fill-flag soon">FILL SOON</span>':'';
+    const rsug=tkState==='now'?refillSuggestion(i,date):null;
     const barCol=pct>50?'#27AE60':pct>20?'#E67E22':'#C0392B';
     const chipCls=d2===null?'':d2>=20?'doh-g':d2>=7?'doh-m':'doh-r';
     return `<div class="det-card">
@@ -1048,7 +1285,7 @@ function renderDash(){
         ${d2!==null?`<span class="doh-chip ${chipCls}">${fmt(d2,1)} days</span>`:''}
       </div>
       <div class="det-card-stats">
-        <div class="dcs${tkCellCls}"><div class="dcs-label">Pod Tank${tkFlag}</div><div class="dcs-val">${fmt(tk2,1)}<span class="unit"> gal</span></div><div class="mini-bar tk"><div class="mini-bar-fill" style="width:${tkPct.toFixed(1)}%;background:${tkCol}"></div><div class="min-tick" style="left:25%"></div></div><div style="font-size:8.5px;color:var(--text-hint);margin-top:2px">refill at ${fmt(rl2,1)} gal</div></div>
+        <div class="dcs${tkCellCls}"><div class="dcs-label">Pod Tank${tkFlag}</div><div class="dcs-val">${fmt(tk2,1)}<span class="unit"> gal</span></div><div class="mini-bar tk"><div class="mini-bar-fill" style="width:${tkPct.toFixed(1)}%;background:${tkCol}"></div><div class="min-tick" style="left:25%"></div></div><div style="font-size:8.5px;color:var(--text-hint);margin-top:2px">refill at ${fmt(rl2,1)} gal${tkState==='now'&&rsug?' &middot; <b style="color:#922B21">add '+rsug.label+'</b>':''}</div></div>
         <div class="dcs"><div class="dcs-label">Total On Hand</div><div class="dcs-val">${fmt(tot2,1)}<span class="unit"> gal</span></div><div class="mini-bar"><div class="mini-bar-fill" style="width:${pct.toFixed(1)}%;background:${barCol}"></div></div></div>
         <div class="dcs"><div class="dcs-label">Containers</div><div class="dcs-val">${qty}</div></div>
       </div>
@@ -1138,7 +1375,7 @@ function renderLog(){
 // NAVIGATION
 // ═══════════════════════════════════════════════
 function switchTab(name){
-  const tabs=['dashboard','tank','onhand','delivery','cars','log'];
+  const tabs=['dashboard','tank','onhand','delivery','cars','order','log'];
   tabs.forEach(t=>{
     // Only toggle the hidden class — never touch inline styles,
     // because the entry tabs rely on style="display:flex" for their layout
@@ -1148,6 +1385,7 @@ function switchTab(name){
     el.classList.toggle('active',tabs[i]===name);
   });
   if(name==='log') renderLog();
+  if(name==='order'){ if(!orderUnits) orderReset(); else renderOrder(); }
   if(name==='dashboard') renderDash();
 }
 
@@ -1158,6 +1396,82 @@ function showToast(msg){
 }
 
 // ═══════════════════════════════════════════════
+// ── ORDER TAB UI ──
+let orderUnits=null;   // user-adjustable units per detergent
+function orderDate(){ const ds=allDates(); return ds[ds.length-1]; }
+function orderReset(){
+  const trig=parseInt(document.getElementById('order-trigger').value)||20;
+  const tr=parseInt(document.getElementById('order-tranche').value)||7;
+  orderUnits=orderNeeds(trig, tr, orderDate()).map(n=>n.units);
+  renderOrder();
+}
+function orderStep(i,delta){
+  orderUnits[i]=Math.max(0,(orderUnits[i]||0)+delta);
+  renderOrder();
+}
+function orderApplyExtras(){
+  if(!window._orderAdds) return;
+  window._orderAdds.forEach((a,i)=>{ orderUnits[i]+=a; });
+  renderOrder();
+}
+function renderOrder(){
+  const date=orderDate();
+  const c=document.getElementById('rows-order'); if(!c) return;
+  c.innerHTML='';
+  DETS.forEach((name,i)=>{
+    const u=orderUnits[i]||0;
+    const now=dohDet(i,date), after=daysAfter(i,date,u);
+    const col=DET_COLORS[i];
+    const div=document.createElement('div'); div.className='entry-card-oh';
+    div.innerHTML=`<span class="entry-det-badge" style="background:${col.bg};color:${col.tx}">${name}</span>
+      <div class="stepper">
+        <button class="step-btn" onclick="orderStep(${i},-1)">&#8722;</button><div class="step-div"></div>
+        <input class="step-input" value="${u}" readonly><div class="step-div"></div>
+        <button class="step-btn" onclick="orderStep(${i},1)">+</button>
+      </div>
+      <div class="oh-right" style="flex-direction:column;align-items:flex-end;gap:2px">
+        <span class="gal-tag">${u} ${ORDER_UNIT_NAME(i,u)}</span>
+        <span style="font-size:10px;color:var(--text-hint)">${now===null?'':fmt(now,0)+'d now'}${after!==null&&u>0?' \u2192 <b style="color:#1A6B3C">'+fmt(after,0)+'d</b>':''}</span>
+      </div>`;
+    c.appendChild(div);
+  });
+  let D=0,E=0;
+  DETS.forEach((_,i)=>{ if(DET_CTYPE[i]==='drum')D+=orderUnits[i]||0; else E+=orderUnits[i]||0; });
+  const planEl=document.getElementById('order-plan');
+  const plan=planSkids(D,E);
+  if(!plan||plan.none){
+    planEl.innerHTML='<div style="background:#D5F5E3;border:1px solid #A9DFBF;border-radius:10px;padding:.8rem .95rem;font-size:13px;font-weight:600;color:#1A6B3C">'+(plan&&plan.none?'\u2713 Nothing to order at this target.':'No valid skid plan found.')+'</div>';
+    window._orderAdds=null;
+    return;
+  }
+  const skidLines=plan.drums.map((d,s)=>`Skid ${s+1}: <b>${d} drum${d===1?'':'s'} + ${plan.boxAlloc[s]} box${plan.boxAlloc[s]===1?'':'es'}</b> \u2713`).join('<br>');
+  let extraHtml='';
+  if(plan.extraD>0||plan.extraE>0){
+    const needs=DETS.map((n,i)=>({units:orderUnits[i]||0}));
+    const adds=distributeExtras(needs,date,plan.extraD,plan.extraE);
+    window._orderAdds=adds;
+    const parts=DETS.map((n,i)=>adds[i]>0?n.split(' #')[0]+' +'+adds[i]:null).filter(Boolean).join(', ');
+    extraHtml=`<div style="background:#FDEBD0;border:1px solid #F5CBA7;border-left:4px solid #935116;border-radius:10px;padding:.7rem .9rem;margin-top:.5rem;font-size:12.5px;color:#935116">
+      To qualify for free shipping this order needs <b>${plan.extraD>0?plan.extraD+' more drum'+(plan.extraD===1?'':'s'):''}${plan.extraD>0&&plan.extraE>0?' and ':''}${plan.extraE>0?plan.extraE+' more box'+(plan.extraE===1?'':'es'):''}</b>.
+      Smartest top-up (soonest-to-run-out first): <b>${parts}</b>
+      <button onclick="orderApplyExtras()" style="display:block;margin-top:7px;padding:7px 14px;font-size:12px;font-weight:700;background:#935116;color:#fff;border:none;border-radius:8px;cursor:pointer">Apply Top-Up</button></div>`;
+  } else { window._orderAdds=null; }
+  // Lead-time coverage: today's real date, weekend-aware arrival
+  const today=new Date().toISOString().slice(0,10);
+  const arr=orderArrival(today);
+  const atRisk=DETS.map((n,i)=>({n,i,d:dohDet(i,date)})).filter(x=>x.d!==null&&x.d<arr.calDays+1);
+  const arrDateTxt=new Date(arr.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  const riskHtml=atRisk.length
+    ? `<div style="margin-top:6px;font-size:12px;color:#922B21"><b>\u26A0 At risk before arrival:</b> ${atRisk.map(x=>x.n.split(' #')[0]+' ('+fmt(x.d,1)+'d)').join(', ')} — refill pod tanks from storage to bridge the gap.</div>`
+    : `<div style="margin-top:6px;font-size:12px;color:#1A6B3C">\u2713 Everything holds until arrival.</div>`;
+  planEl.innerHTML=`<div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:.8rem .95rem">
+    <div style="font-size:11px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Free-Shipping Plan &middot; ${D} drums + ${E} boxes</div>
+    <div style="font-size:13px;line-height:1.7;color:var(--text)">${skidLines}</div>
+    <div style="margin-top:7px;padding-top:7px;border-top:1px solid var(--line);font-size:12px;color:var(--text-sec)">Ordered today &rarr; arrives <b>~${arrDateTxt}</b> (${arr.calDays} calendar days${arr.calDays>LEAD_BIZ_DAYS?', includes a weekend of washing':''})</div>
+    ${riskHtml}
+  </div>`+extraHtml;
+}
+
 // INIT
 // ═══════════════════════════════════════════════
 document.getElementById('top-date').textContent =
