@@ -595,7 +595,14 @@ function updateStorageBar() {
 // ═══════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════
-function today(){ return new Date().toISOString().slice(0,10); }
+// LOCAL calendar date (device time zone). Never use toISOString() for a date —
+// it converts to UTC, which rolls over to tomorrow after 7pm Central.
+function localDate(d){
+  d=d||new Date();
+  const p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+}
+function today(){ return localDate(); }
 function allDates(){ return [...new Set([...Object.keys(DB.tank),...Object.keys(DB.onhand)])].sort(); }
 function ohTotal(d){ const r=DB.onhand[d]; return r?Object.values(r).reduce((a,b)=>a+b,0):0; }
 function tankTotal(d){ const r=DB.tank[d]; return r?Object.values(r).reduce((a,b)=>a+b,0):0; }
@@ -720,7 +727,7 @@ function orderArrival(fromDate){
     d.setDate(d.getDate()+1);
     if(d.getDay()!==0&&d.getDay()!==6) biz++;
   }
-  const arrive=d.toISOString().slice(0,10);
+  const arrive=localDate(d);
   const cal=Math.round((new Date(arrive)-new Date(fromDate))/86400000);   // calendar days of consumption
   return {date:arrive, calDays:cal};
 }
@@ -765,7 +772,7 @@ function dohWithIncoming(i, date){
   if(!avg||avg<=0) return null;
   // incoming is judged against REAL today — an order placed this afternoon
   // counts immediately, even before today's readings exist
-  const rt=new Date().toISOString().slice(0,10);
+  const rt=localDate();
   return (totalGalDet(i,date)+incomingGal(i,rt>date?rt:date))/avg;
 }
 
@@ -869,7 +876,7 @@ function needsAttention(date){
   DETS.forEach((name,i)=>{
     const d=dohDet(i,date);
     // red = may not survive the shipping window (worst case ~6 calendar days + safety)
-    const rtNow=new Date().toISOString().slice(0,10);
+    const rtNow=localDate();
     const inc=incomingGal(i,rtNow>date?rtNow:date);
     const de=dohWithIncoming(i,date);   // counts what's already ordered
     if(de!==null&&de<20) alerts.push({type:'low',i,name,msg:`${d!==null?d.toFixed(1):'?'} days on hand${inc>0?' (+'+fmtI(inc)+' gal on the way)':''} — ${de<10?'order today (4-business-day shipping)':'reorder'}`,sev:de<10?'red':'amber'});
@@ -1205,6 +1212,11 @@ function runGuards(tab, date, gals, vals){
 function saveEntry(tab){
   const date=document.getElementById('date-'+tab).value;
   if(!date){ showToast('Please select a date'); return; }
+  const realToday=localDate();
+  if(date>realToday){
+    alert('\u26A0 That date is in the FUTURE ('+date+').\n\nToday is '+realToday+'. Readings can only be saved for today or an earlier date.\n\nPlease correct the date and try again.');
+    return;
+  }
 
   if(tab==='cars'){
     const counts=PACKAGES.map((_,p)=>parseInt(document.getElementById('qn-cars-'+p).value)||0);
@@ -1462,7 +1474,7 @@ function orderApplyExtras(){
   renderOrder();
 }
 function saveOrder(){
-  const date=new Date().toISOString().slice(0,10);
+  const date=localDate();
   const total=orderUnits.reduce((a,b)=>a+b,0);
   if(!total){ showToast('Nothing in this order'); return; }
   if(DB.orders&&DB.orders[date]&&!confirm('An order was already marked today. Record another?')) return;
@@ -1491,7 +1503,7 @@ function renderOrder(){
   const c=document.getElementById('rows-order'); if(!c) return;
   c.innerHTML='';
   // Incoming orders banner
-  const open=openOrders(new Date().toISOString().slice(0,10));
+  const open=openOrders(localDate());
   if(open.length){
     const wrap=document.createElement('div');
     wrap.style.cssText='background:#EBF2FA;border:1px solid #BDD4EA;border-left:4px solid #2980B9;border-radius:10px;padding:.7rem .9rem;margin-bottom:.6rem';
@@ -1542,8 +1554,8 @@ function renderOrder(){
       <button onclick="orderApplyExtras()" style="display:block;margin-top:7px;padding:7px 14px;font-size:12px;font-weight:700;background:#935116;color:#fff;border:none;border-radius:8px;cursor:pointer">Apply Top-Up</button></div>`;
   } else { window._orderAdds=null; }
   // Lead-time coverage: today's real date, weekend-aware arrival
-  const today=new Date().toISOString().slice(0,10);
-  const arr=orderArrival(today);
+  const todayD=localDate();
+  const arr=orderArrival(todayD);
   const atRisk=DETS.map((n,i)=>({n,i,d:dohDet(i,date)})).filter(x=>x.d!==null&&x.d<arr.calDays+1);
   const arrDateTxt=new Date(arr.date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
   const riskHtml=atRisk.length
@@ -1564,7 +1576,9 @@ document.getElementById('top-date').textContent =
   new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
 
 ['tank','onhand','delivery','cars'].forEach(t=>{
-  document.getElementById('date-'+t).value=today();
+  const de=document.getElementById('date-'+t);
+  de.value=today();
+  de.max=localDate();   // picker cannot offer a future date
 });
 
 cloudInit();
