@@ -266,8 +266,10 @@ if (typeof msal === 'undefined') {
 <div id="tab-log" class="hidden log-page">
   <div class="log-summary" id="log-stats"></div>
   <div style="padding:.65rem 1rem 0">
+    <button onclick="shareEndOfDay()" style="width:100%;padding:.85rem;font-size:14px;font-weight:700;background:var(--red);color:#fff;border:none;border-radius:12px;cursor:pointer;letter-spacing:.03em;text-transform:uppercase;box-shadow:0 2px 8px rgba(139,26,26,.28);margin-bottom:.55rem">&#128228; End-of-Day Summary</button>
     <button id="sync-hist-btn" onclick="syncHistory()" style="width:100%;padding:.7rem;font-size:13px;font-weight:700;background:#fff;color:#8B1A1A;border:1.5px solid #8B1A1A;border-radius:10px;cursor:pointer">&#9729; Sync History to Cloud (one-time)</button>
   </div>
+  <canvas id="eod-canvas" style="display:none"></canvas>
   <div class="log-table-wrap">
     <div class="section-title" style="margin-bottom:.5rem">Recent Entries</div>
     <div id="log-body"></div>
@@ -1568,6 +1570,144 @@ function renderOrder(){
     ${riskHtml}
   </div>`+extraHtml+
   `<button onclick="saveOrder()" style="display:block;width:100%;margin-top:.6rem;padding:.85rem;font-size:14px;font-weight:700;background:var(--red);color:#fff;border:none;border-radius:12px;cursor:pointer;letter-spacing:.03em;text-transform:uppercase;box-shadow:0 2px 8px rgba(139,26,26,.28)">Mark as Ordered</button>`;
+}
+
+// ── END-OF-DAY SUMMARY IMAGE (for Slack) ──
+function buildEodCanvas(date){
+  const cv=document.getElementById('eod-canvas');
+  const scale=2;                                   // retina-crisp
+  const W=860, rowH=46, headH=150, foot=54;
+  const H=headH+rowH*DETS.length+foot+34+22;   // +room for optional neg-usage banner
+  cv.width=W*scale; cv.height=H*scale;
+  const x=cv.getContext('2d'); x.scale(scale,scale);
+  const RED='#8B1A1A', INK='#16181D', SUB='#6A7180', LINE='#E7E9ED';
+  // bg
+  x.fillStyle='#FFFFFF'; x.fillRect(0,0,W,H);
+  // header band
+  const g=x.createLinearGradient(0,0,0,headH); g.addColorStop(0,'#8F1C1C'); g.addColorStop(1,'#7A1515');
+  x.fillStyle=g; x.fillRect(0,0,W,headH);
+  x.fillStyle='#C0392B'; x.fillRect(0,headH-5,W,5);
+  x.fillStyle='rgba(255,255,255,.62)'; x.font='700 13px Arial'; x.textBaseline='alphabetic';
+  x.fillText("TOMMY'S EXPRESS · NE43", 26, 42);
+  x.fillStyle='#FFFFFF'; x.font='800 32px Arial';
+  x.fillText('End-of-Day Detergent Report', 26, 82);
+  const dObj=new Date(date+'T12:00:00');
+  x.fillStyle='rgba(255,255,255,.9)'; x.font='600 17px Arial';
+  x.fillText(dObj.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}), 26, 112);
+  // cars washed for the day, right-aligned
+  const cars=(DB.cars[date]||[]).reduce((a,b)=>a+(b||0),0);
+  if(cars>0){
+    x.textAlign='right';
+    x.fillStyle='rgba(255,255,255,.62)'; x.font='700 12px Arial';
+    x.fillText('CARS WASHED', W-26, 60);
+    x.fillStyle='#FFFFFF'; x.font='800 40px Arial';
+    x.fillText(String(cars), W-26, 100);
+    x.textAlign='left';
+  }
+  // column headers
+  let y=headH+30;
+  x.fillStyle=SUB; x.font='700 12px Arial';
+  x.fillText('DETERGENT', 26, y);
+  x.textAlign='right';
+  x.fillText('USED', 405, y);
+  x.fillText('EXPECTED', 525, y);
+  x.fillText('ON HAND', 645, y);
+  x.fillText('DAYS', 725, y);
+  x.textAlign='center';
+  x.fillText('A.M. FILL', W-58, y);
+  x.textAlign='left';
+  y+=12; x.strokeStyle=LINE; x.lineWidth=1; x.beginPath(); x.moveTo(26,y); x.lineTo(W-26,y); x.stroke();
+  // rows
+  let negCount=0;
+  DETS.forEach((name,i)=>{
+    const ry=y+8+i*rowH;
+    const c=DET_COLORS[i];
+    // negative-usage highlight band (drawn first, behind everything)
+    const uNeg=dailyUsageDet(i,date);
+    if(uNeg!==null && uNeg<0){
+      negCount++;
+      x.fillStyle='#FCE8E6'; x.fillRect(14, ry, W-28, rowH);
+      x.fillStyle='#B03A2E'; x.fillRect(14, ry, 4, rowH);   // accent edge
+    }
+    // swatch
+    x.fillStyle=c.bg; roundRect(x,26,ry+rowH/2-13,16,26,4); x.fill();
+    // name
+    x.fillStyle=INK; x.font='700 16px Arial'; x.textBaseline='middle';
+    x.fillText(name, 52, ry+rowH/2);
+    // used today (actual)
+    const used=dailyUsageDet(i,date);
+    x.textAlign='right';
+    x.font='600 16px Arial'; x.fillStyle=used!==null&&used<0?'#B03A2E':INK;
+    x.fillText(used!==null?fmt(used,1):'—', 405, ry+rowH/2);
+    // expected (calc) usage
+    const calc=(DB.calc[date]||{})[i];
+    x.fillStyle=SUB; x.font='500 16px Arial';
+    x.fillText(calc!==undefined&&calc>0?fmt(calc,1):'—', 525, ry+rowH/2);
+    // on hand
+    const oh=totalGalDet(i,date);
+    x.fillStyle=INK; x.font='600 16px Arial';
+    x.fillText(fmt(oh,0), 645, ry+rowH/2);
+    // days left
+    const doh=dohDet(i,date);
+    let dc=INK;
+    if(doh!==null){ if(doh<10)dc='#B03A2E'; else if(doh<20)dc='#B9770E'; }
+    x.fillStyle=dc; x.font='700 16px Arial';
+    x.fillText(doh!==null?fmt(doh,0):'—', 725, ry+rowH/2);
+    // A.M. fill flag — needs filling if tank below its refill level
+    const tk=(DB.tank[date]||{})[i];
+    const rl=refillLevel(i,date);
+    x.textAlign='center';
+    if(tk!==undefined && tk<rl){
+      const rs=refillSuggestion(i,date);
+      // red pill
+      const cx=W-58, cyy=ry+rowH/2;
+      x.fillStyle='#B03A2E'; roundRect(x,cx-42,cyy-13,84,26,13); x.fill();
+      x.fillStyle='#fff'; x.font='700 12px Arial';
+      x.fillText(rs?('+'+rs.label.toUpperCase()):'FILL', cx, cyy+1);
+    } else {
+      x.font='600 17px Arial'; x.fillStyle='#C2C6CE';
+      x.fillText('\u2014', W-58, ry+rowH/2);
+    }
+    x.textAlign='left'; x.textBaseline='alphabetic';
+    // divider
+    x.strokeStyle=LINE; x.beginPath(); x.moveTo(26,ry+rowH); x.lineTo(W-26,ry+rowH); x.stroke();
+  });
+  // negative-usage warning banner (above the footer legend)
+  const fy0=headH+34+rowH*DETS.length;
+  if(negCount>0){
+    x.fillStyle='#B03A2E'; roundRect(x,14,fy0+2,W-28,26,7); x.fill();
+    x.fillStyle='#fff'; x.font='700 13px Arial'; x.textBaseline='middle'; x.textAlign='left';
+    x.fillText('\u26A0  '+negCount+' detergent'+(negCount>1?'s':'')+' show negative usage — check for a missed delivery, refill, or wrong-date entry.', 26, fy0+15);
+  }
+  // footer
+  const fy=fy0+(negCount>0?46:30);
+  x.fillStyle=SUB; x.font='500 12px Arial'; x.textBaseline='middle'; x.textAlign='left';
+  x.fillText('USED / EXPECTED / ON HAND in gallons · DAYS = days of supply · orange<20d, red<10d · A.M. FILL = top up before open', 26, fy);
+  return cv;
+}
+function roundRect(x,px,py,w,h,r){ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath(); }
+
+async function shareEndOfDay(){
+  const dates=allDates(); if(!dates.length){ showToast('No data yet'); return; }
+  const date=dates[dates.length-1];
+  const cv=buildEodCanvas(date);
+  const fileName='NE43-detergent-'+date+'.png';
+  cv.toBlob(async (blob)=>{
+    if(!blob){ showToast('Could not build image'); return; }
+    const file=new File([blob],fileName,{type:'image/png'});
+    // Preferred path: native share sheet (iPad -> Slack)
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({files:[file], title:'End-of-Day Detergent Report'});
+        return;
+      }catch(e){ if(e.name==='AbortError') return; }
+    }
+    // Fallback: download the image so it can be dragged into Slack
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=fileName; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    showToast('Image saved — attach it in Slack');
+  }, 'image/png');
 }
 
 // INIT
