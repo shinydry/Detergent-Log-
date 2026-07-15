@@ -50,7 +50,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 .c-red{color:var(--red)!important;}.c-green{color:var(--green)!important;}.c-amber{color:var(--amber)!important;}.c-blue{color:var(--blue)!important;}
 
 /* DATE SELECTOR */
-.date-row{display:flex;align-items:center;gap:8px;padding:.6rem .9rem;background:var(--white);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;color:var(--text-sec);}
+.date-row{display:flex;align-items:center;gap:8px;padding:.6rem .9rem;background:var(--white);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;color:var(--text-sec);;flex-wrap:wrap;row-gap:6px}
 .date-row select{border:none;background:transparent;font-size:13px;font-weight:700;color:var(--red);cursor:pointer;outline:none;flex:1;}
 
 /* SECTION */
@@ -64,6 +64,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 .det-card-name{font-size:14.5px;font-weight:700;color:var(--text);flex:1;letter-spacing:-.01em;}
 .det-card-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));}
 .det-card-stats2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);}
+.det-card-stats2.stats4{grid-template-columns:repeat(4,minmax(0,1fr));}
 .dcs{padding:.55rem .85rem .5rem;}
 .dcs-label{font-size:9.5px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px;}
 .dcs-val{font-family:var(--disp);font-size:22px;font-weight:600;color:var(--text);line-height:1.05;}
@@ -179,6 +180,7 @@ if (typeof msal === 'undefined') {
   <div class="date-row">
     &#128197; Viewing:&nbsp;
     <select id="dash-date-pick" onchange="renderDash()"></select>
+    <span id="delivery-chip" style="margin-left:auto"></span>
   </div>
   <div id="attention-wrap"></div>
   <div>
@@ -1301,6 +1303,20 @@ function renderDash(){
   const date=pick.value||dates[dates.length-1];
   const usedDays=Math.min(dates.indexOf(date),7);
 
+  // ── Delivery status chip (did a delivery get recorded for this date?) ──
+  const dchip=document.getElementById('delivery-chip');
+  if(dchip){
+    const drec=DB.delivery[date];
+    const delivered=drec?DETS.map((_,i)=>drec[i]>0?{i,gal:drec[i]}:null).filter(Boolean):[];
+    if(delivered.length){
+      const names=delivered.map(d=>DETS[d.i].split(' #')[0]).join(', ');
+      const totGal=delivered.reduce((s,d)=>s+d.gal,0);
+      dchip.innerHTML=`<span title="${names}" style="display:inline-flex;align-items:center;gap:5px;background:#D5F5E3;border:1px solid #A9DFBF;color:#1A6B3C;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap">&#128666; Delivery logged &middot; ${delivered.length} item${delivered.length>1?'s':''}, ${fmt(totGal,0)} gal</span>`;
+    } else {
+      dchip.innerHTML=`<span style="display:inline-flex;align-items:center;gap:5px;background:#F4F5F7;border:1px solid var(--border);color:var(--text-hint);font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap">&#128230; No delivery recorded</span>`;
+    }
+  }
+
   // ── Needs Attention ──
   const alerts=needsAttention(date);
   const aw=document.getElementById('attention-wrap');
@@ -1338,6 +1354,9 @@ function renderDash(){
     const tkFlag=tkState==='now'?'<span class="fill-flag now">FILL NOW</span>':tkState==='soon'?'<span class="fill-flag soon">FILL SOON</span>':'';
     const rsug=tkState==='now'?refillSuggestion(i,date):null;
     const barCol=pct>50?'#27AE60':pct>20?'#E67E22':'#C0392B';
+    const delGal=(DB.delivery[date]||{})[i]||0;
+    const delQty=(DB.delqty[date]||{})[i];
+    const delCount=delQty!==undefined?delQty:(delGal>0?Math.round(delGal/ORDER_UNIT_GAL(i)):0);
     const chipCls=d2===null?'':d2>=20?'doh-g':d2>=7?'doh-m':'doh-r';
     return `<div class="det-card">
       <div class="det-card-hdr">
@@ -1347,13 +1366,14 @@ function renderDash(){
       </div>
       <div class="det-card-stats">
         <div class="dcs${tkCellCls}"><div class="dcs-label">Pod Tank${tkFlag}</div><div class="dcs-val">${fmt(tk2,1)}<span class="unit"> gal</span></div><div class="mini-bar tk"><div class="mini-bar-fill" style="width:${tkPct.toFixed(1)}%;background:${tkCol}"></div><div class="min-tick" style="left:25%"></div></div><div style="font-size:8.5px;color:var(--text-hint);margin-top:2px">refill at ${fmt(rl2,1)} gal${tkState==='now'&&rsug?' &middot; <b style="color:#922B21">add '+rsug.label+'</b>':''}</div></div>
+        <div class="dcs"><div class="dcs-label">Daily Usage</div><div class="dcs-val">${du2===null?'—':fmt(du2,1)}<span class="unit"> gal</span></div></div>
+        <div class="dcs"><div class="dcs-label">Expected Usage</div><div class="dcs-val">${cavg===null?'—':fmt(cavg,1)}<span class="unit"> gal</span></div></div>
+      </div>
+      <div class="det-card-stats2 stats4">
         <div class="dcs"><div class="dcs-label">Total On Hand</div><div class="dcs-val">${fmt(tot2,1)}<span class="unit"> gal</span></div><div class="mini-bar"><div class="mini-bar-fill" style="width:${pct.toFixed(1)}%;background:${barCol}"></div></div></div>
         <div class="dcs"><div class="dcs-label">Containers</div><div class="dcs-val">${qty}</div></div>
-      </div>
-      <div class="det-card-stats2">
-        <div class="dcs"><div class="dcs-label">Daily Usage</div><div class="dcs-val">${du2===null?'—':fmt(du2,1)}</div></div>
-        <div class="dcs"><div class="dcs-label">7-day Avg</div><div class="dcs-val">${avg===null?'—':fmt(avg,1)}</div></div>
-        <div class="dcs"><div class="dcs-label">Expected /day</div><div class="dcs-val">${cavg===null?'—':fmt(cavg,1)}</div></div>
+        <div class="dcs"><div class="dcs-label">Delivered</div><div class="dcs-val">${delCount>0?`<span style="color:#1A6B3C">+${delCount}</span>`:'—'}</div></div>
+        <div class="dcs"><div class="dcs-label">7-day Avg</div><div class="dcs-val">${avg===null?'—':fmt(avg,1)}<span class="unit"> gal</span></div></div>
       </div>
     </div>`;
   }).join('');
@@ -1576,7 +1596,7 @@ function renderOrder(){
 function buildEodCanvas(date){
   const cv=document.getElementById('eod-canvas');
   const scale=2;                                   // retina-crisp
-  const W=860, rowH=46, headH=150, foot=54;
+  const W=960, rowH=46, headH=150, foot=54;
   const H=headH+rowH*DETS.length+foot+34+22;   // +room for optional neg-usage banner
   cv.width=W*scale; cv.height=H*scale;
   const x=cv.getContext('2d'); x.scale(scale,scale);
@@ -1609,10 +1629,11 @@ function buildEodCanvas(date){
   x.fillStyle=SUB; x.font='700 12px Arial';
   x.fillText('DETERGENT', 26, y);
   x.textAlign='right';
-  x.fillText('USED', 405, y);
-  x.fillText('EXPECTED', 525, y);
-  x.fillText('ON HAND', 645, y);
-  x.fillText('DAYS', 725, y);
+  x.fillText('USED', 400, y);
+  x.fillText('EXPECTED', 520, y);
+  x.fillText('DELIVERED', 650, y);
+  x.fillText('ON HAND', 770, y);
+  x.fillText('DAYS', 850, y);
   x.textAlign='center';
   x.fillText('A.M. FILL', W-58, y);
   x.textAlign='left';
@@ -1638,21 +1659,25 @@ function buildEodCanvas(date){
     const used=dailyUsageDet(i,date);
     x.textAlign='right';
     x.font='600 16px Arial'; x.fillStyle=used!==null&&used<0?'#B03A2E':INK;
-    x.fillText(used!==null?fmt(used,1):'—', 405, ry+rowH/2);
+    x.fillText(used!==null?fmt(used,1):'—', 400, ry+rowH/2);
     // expected (calc) usage
     const calc=(DB.calc[date]||{})[i];
     x.fillStyle=SUB; x.font='500 16px Arial';
-    x.fillText(calc!==undefined&&calc>0?fmt(calc,1):'—', 525, ry+rowH/2);
+    x.fillText(calc!==undefined&&calc>0?fmt(calc,1):'—', 520, ry+rowH/2);
+    // delivered today — green when something arrived, gray dash otherwise
+    const del=(DB.delivery[date]||{})[i]||0;
+    if(del>0){ x.fillStyle='#1A6B3C'; x.font='700 16px Arial'; x.fillText('+'+fmt(del,0), 650, ry+rowH/2); }
+    else { x.fillStyle='#C2C6CE'; x.font='600 16px Arial'; x.fillText('\u2014', 650, ry+rowH/2); }
     // on hand
     const oh=totalGalDet(i,date);
     x.fillStyle=INK; x.font='600 16px Arial';
-    x.fillText(fmt(oh,0), 645, ry+rowH/2);
+    x.fillText(fmt(oh,0), 770, ry+rowH/2);
     // days left
     const doh=dohDet(i,date);
     let dc=INK;
     if(doh!==null){ if(doh<10)dc='#B03A2E'; else if(doh<20)dc='#B9770E'; }
     x.fillStyle=dc; x.font='700 16px Arial';
-    x.fillText(doh!==null?fmt(doh,0):'—', 725, ry+rowH/2);
+    x.fillText(doh!==null?fmt(doh,0):'—', 850, ry+rowH/2);
     // A.M. fill flag — needs filling if tank below its refill level
     const tk=(DB.tank[date]||{})[i];
     const rl=refillLevel(i,date);
@@ -1682,7 +1707,7 @@ function buildEodCanvas(date){
   // footer
   const fy=fy0+(negCount>0?46:30);
   x.fillStyle=SUB; x.font='500 12px Arial'; x.textBaseline='middle'; x.textAlign='left';
-  x.fillText('USED / EXPECTED / ON HAND in gallons · DAYS = days of supply · orange<20d, red<10d · A.M. FILL = top up before open', 26, fy);
+  x.fillText('USED / EXPECTED / DELIVERED / ON HAND in gallons · green = received today · DAYS = days of supply · orange<20d, red<10d · A.M. FILL = top up before open', 26, fy);
   return cv;
 }
 function roundRect(x,px,py,w,h,r){ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath(); }
