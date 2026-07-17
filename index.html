@@ -1715,24 +1715,45 @@ function roundRect(x,px,py,w,h,r){ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+
 async function shareEndOfDay(){
   const dates=allDates(); if(!dates.length){ showToast('No data yet'); return; }
   const date=dates[dates.length-1];
+  // Guard: warn when the latest data is not from today (unsynced/behind device)
+  const rt=localDate();
+  if(date!==rt){
+    if(!confirm('\u26A0 The most recent data on this device is for '+date+' \u2014 not today ('+rt+').\n\nIf today\u2019s numbers were entered on another device, tap SYNCED \u2192 Pull latest first.\n\nShare the '+date+' report anyway?')) return;
+  }
+  // Guard: point out missing areas for the report date (still allowed)
+  const missing=[];
+  if(!DB.tank[date]) missing.push('pod tank readings');
+  if(!DB.onhand[date]) missing.push('inventory counts');
+  if(!DB.cars[date]) missing.push('cars washed');
+  if(missing.length){
+    if(!confirm('Heads up: '+date+' has no '+missing.join(', ')+' recorded. Those will show as blanks/dashes.\n\nShare anyway?')) return;
+  }
+  // Build the file SYNCHRONOUSLY inside the tap. iOS Safari drops file attachments
+  // (sharing only the title text) if the share call happens after an async gap.
   const cv=buildEodCanvas(date);
   const fileName='NE43-detergent-'+date+'.png';
-  cv.toBlob(async (blob)=>{
-    if(!blob){ showToast('Could not build image'); return; }
-    const file=new File([blob],fileName,{type:'image/png'});
-    // Preferred path: native share sheet (iPad -> Slack)
-    if(navigator.canShare && navigator.canShare({files:[file]})){
-      try{
-        await navigator.share({files:[file], title:'End-of-Day Detergent Report'});
-        return;
-      }catch(e){ if(e.name==='AbortError') return; }
-    }
-    // Fallback: download the image so it can be dragged into Slack
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download=fileName; a.click();
-    setTimeout(()=>URL.revokeObjectURL(url),4000);
-    showToast('Image saved — attach it in Slack');
-  }, 'image/png');
+  const dataUrl=cv.toDataURL('image/png');
+  const b64=dataUrl.split(',')[1];
+  const bin=atob(b64);
+  const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  const file=new File([bytes],fileName,{type:'image/png'});
+  // Preferred path: native share sheet \u2014 but ONLY on touch devices (iPad/iPhone).
+  // Desktop share flyouts (Windows) often drop file attachments; there the download
+  // fallback is the reliable route (drag the PNG into Slack).
+  const isTouch=('ontouchend' in document)||navigator.maxTouchPoints>0;
+  if(isTouch && navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({files:[file]});
+      return;
+    }catch(e){ if(e.name==='AbortError') return; }
+  }
+  // Fallback: download the image so it can be dragged into Slack
+  const blob=new Blob([bytes],{type:'image/png'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=fileName; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+  showToast('Image saved \u2014 attach it in Slack');
 }
 
 // INIT
