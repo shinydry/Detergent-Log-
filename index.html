@@ -22,7 +22,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 .app{display:flex;flex-direction:column;height:100%;max-width:960px;margin:0 auto;background:var(--bg);}
 
 /* HEADER */
-.topbar{background:linear-gradient(180deg,#8F1C1C 0%,#7A1515 100%);border-bottom:3px solid var(--red-bright);padding:.7rem 1.25rem .65rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.topbar{background:linear-gradient(180deg,#8F1C1C 0%,#7A1515 100%);border-bottom:3px solid var(--red-bright);padding:.7rem 1.25rem .65rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:10px;}
 .topbar-brand{color:#fff;line-height:1.05;}
 .topbar-brand .eyebrow{display:block;font-size:9.5px;font-weight:700;letter-spacing:.18em;color:rgba(255,255,255,.6);text-transform:uppercase;margin-bottom:2px;}
 .topbar-brand .title{display:block;font-family:var(--disp);font-size:21px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
@@ -31,11 +31,21 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
 .clear-btn{font-size:11px;font-weight:700;color:rgba(255,255,255,.7);background:rgba(255,255,255,.15);border:none;border-radius:6px;padding:4px 9px;cursor:pointer;letter-spacing:.04em;}
 .clear-btn:active{background:rgba(255,255,255,.25);}
 
-/* TAB NAV */
-.tab-nav{background:var(--white);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch;}
-.tab-nav::-webkit-scrollbar{display:none;}
-.tab-nav-item{padding:.75rem 1rem;font-size:13px;font-weight:600;color:var(--text-sec);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:color .15s,border-color .15s;display:flex;align-items:center;gap:5px;flex-shrink:0;}
-.tab-nav-item.active{color:var(--red);border-bottom-color:var(--red);}
+/* HAMBURGER + SLIDE-OUT DRAWER NAV (manager-app style, approved prototype) */
+.hamburger-btn{background:rgba(255,255,255,.14);border:none;color:#fff;width:38px;height:38px;border-radius:9px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.hamburger-btn:active{background:rgba(255,255,255,.24);}
+.drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;opacity:0;pointer-events:none;transition:opacity .2s;}
+.drawer-backdrop.open{opacity:1;pointer-events:auto;}
+.drawer{position:fixed;top:0;left:0;bottom:0;width:78%;max-width:300px;background:#fff;z-index:201;transform:translateX(-100%);transition:transform .22s ease;display:flex;flex-direction:column;box-shadow:2px 0 24px rgba(0,0,0,.25);}
+.drawer.open{transform:translateX(0);}
+.drawer-header{background:var(--red);padding:1.1rem 1rem;color:#fff;flex-shrink:0;}
+.drawer-header .eyebrow{display:block;font-size:9.5px;font-weight:700;letter-spacing:.16em;color:rgba(255,255,255,.65);text-transform:uppercase;margin-bottom:3px;}
+.drawer-header .title{display:block;font-family:var(--disp);font-size:18px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;}
+.drawer-list{flex:1;overflow-y:auto;padding:.5rem 0;}
+.drawer-item{display:flex;align-items:center;gap:12px;padding:.85rem 1.1rem;cursor:pointer;color:var(--text);font-size:15px;font-weight:600;border-left:3px solid transparent;}
+.drawer-item .di-icon{font-size:18px;width:22px;text-align:center;flex-shrink:0;}
+.drawer-item.active{color:var(--red);background:#FBEAEA;border-left-color:var(--red);}
+.drawer-item:active{background:#F4F5F7;}
 
 /* SCROLLABLE BODY */
 .page-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:1rem;display:flex;flex-direction:column;gap:.9rem;}
@@ -156,6 +166,7 @@ if (typeof msal === 'undefined') {
 
 <!-- HEADER -->
 <div class="topbar">
+  <button class="hamburger-btn" onclick="openDrawer()">&#9776;</button>
   <span class="topbar-brand"><span class="eyebrow">Tommy&#8217;s Express &middot; NE43</span><span class="title">Detergent Inventory</span></span>
   <div class="topbar-right">
     <button class="clear-btn" id="cloud-btn" onclick="cloudButtonClick()">&#9729; SIGN IN</button>
@@ -164,15 +175,25 @@ if (typeof msal === 'undefined') {
 </div>
 <div class="storage-bar" id="storage-bar"></div>
 
-<!-- TAB NAV -->
-<div class="tab-nav">
-  <div class="tab-nav-item active" onclick="switchTab('dashboard')">&#9632; Dashboard</div>
-  <div class="tab-nav-item" onclick="switchTab('tank')">&#9670; Pod Tank</div>
-  <div class="tab-nav-item" onclick="switchTab('onhand')">&#9723; Inventory</div>
-  <div class="tab-nav-item" onclick="switchTab('delivery')">&#9651; Delivered</div>
-  <div class="tab-nav-item" onclick="switchTab('cars')">&#128663; Cars</div>
-  <div class="tab-nav-item" onclick="switchTab('order')">&#128230; Order</div>
-  <div class="tab-nav-item" onclick="switchTab('log')">&#9776; Log</div>
+<!-- DRAWER NAV -->
+<div class="drawer-backdrop" id="drawer-backdrop" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <span class="eyebrow">Tommy&#8217;s Express &middot; NE43</span>
+    <span class="title">Detergent Inventory</span>
+  </div>
+  <div class="drawer-list" id="drawer-list">
+    <div class="drawer-item active" data-tab="dashboard"><span class="di-icon">&#9632;</span>Dashboard</div>
+    <div class="drawer-item" data-tab="fill"><span class="di-icon">&#9989;</span>Fill Verification</div>
+    <div class="drawer-item" data-tab="delivery"><span class="di-icon">&#9651;</span>Delivered</div>
+    <div class="drawer-item" data-tab="onhand"><span class="di-icon">&#9723;</span>Inventory</div>
+    <div class="drawer-item" data-tab="tank"><span class="di-icon">&#9670;</span>Pod Tank</div>
+    <div class="drawer-item" data-tab="cars"><span class="di-icon">&#128663;</span>Cars Washed</div>
+    <div class="drawer-item" data-tab="report"><span class="di-icon">&#128228;</span>End-of-Day Report</div>
+    <div class="drawer-item" data-tab="order"><span class="di-icon">&#128230;</span>Order</div>
+    <div class="drawer-item" data-tab="team"><span class="di-icon">&#128101;</span>Team Roster</div>
+    <div class="drawer-item" data-tab="log"><span class="di-icon">&#9776;</span>Log</div>
+  </div>
 </div>
 
 <!-- ═══ DASHBOARD ═══ -->
@@ -221,6 +242,34 @@ if (typeof msal === 'undefined') {
   <div class="save-btn-wrap"><button class="save-btn" onclick="saveEntry('delivery')">Save Delivery Entry</button></div>
 </div>
 
+<!-- ═══ FILL VERIFICATION ═══ -->
+<div id="tab-fill" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+  <div class="entry-topbar">Fill Verification <span style="opacity:.65;font-weight:400;font-size:10px">Inventory &rarr; Pod Tank, signed off</span></div>
+  <div class="entry-date-bar"><label>Date</label><input type="date" id="date-fill" onchange="renderFillLog()"></div>
+  <div class="entry-scroll">
+    <div style="padding:.85rem 1rem 0">
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:.85rem .9rem">
+        <div style="font-size:11px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Log a Fill</div>
+        <select id="fill-det" style="width:100%;font-size:14px;font-weight:600;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:#F8F9FA;color:var(--text);margin-bottom:10px"></select>
+        <div class="entry-card-oh" id="fill-qty-row" style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px"></div>
+        <div style="font-size:10px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Filled by</div>
+        <select id="fill-filler" style="width:100%;font-size:14px;font-weight:600;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:#F8F9FA;color:var(--text);margin-bottom:8px">
+          <option value="">Who did the fill\u2026</option>
+        </select>
+        <div style="font-size:10px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Verified by</div>
+        <select id="fill-verifier" style="width:100%;font-size:14px;font-weight:600;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:#F8F9FA;color:var(--text);margin-bottom:10px">
+          <option value="">Who checked it\u2026</option>
+        </select>
+        <button onclick="logFill()" style="width:100%;padding:.75rem;font-size:13px;font-weight:700;background:var(--red);color:#fff;border:none;border-radius:9px;cursor:pointer;letter-spacing:.03em;text-transform:uppercase">Log Fill</button>
+      </div>
+    </div>
+    <div style="padding:1rem 1rem 0">
+      <div class="section-title" style="margin-bottom:.5rem">Today's Fills</div>
+      <div id="fill-log-list"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ CARS WASHED ═══ -->
 <div id="tab-cars" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
   <div class="entry-topbar">Cars Washed by Package <span style="opacity:.65;font-weight:400;font-size:10px">Club + retail combined</span></div>
@@ -264,14 +313,37 @@ if (typeof msal === 'undefined') {
   </div>
 </div>
 
+<!-- ═══ TEAM ROSTER ═══ -->
+<div id="tab-team" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow-y:auto;">
+  <div class="entry-topbar">Team Roster <span style="opacity:.65;font-weight:400;font-size:10px">used for Fill Verification sign-off</span></div>
+  <div style="padding:1rem">
+    <div id="team-list" style="background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:.6rem"></div>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="team-add-name" placeholder="Add team member\u2026" style="flex:1;font-size:14px;padding:9px 10px;border:1px solid var(--border);border-radius:8px">
+      <button onclick="addTeamMember()" style="padding:9px 16px;font-size:13px;font-weight:700;background:var(--red);color:#fff;border:none;border-radius:8px;cursor:pointer">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ END-OF-DAY REPORT ═══ -->
+<div id="tab-report" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow-y:auto;">
+  <div class="entry-topbar">End-of-Day Report <span style="opacity:.65;font-weight:400;font-size:10px">Posts a branded summary to Slack</span></div>
+  <div style="padding:1rem">
+    <button onclick="postEndOfDayToSlack()" style="width:100%;padding:.85rem;font-size:14px;font-weight:700;background:var(--red);color:#fff;border:none;border-radius:12px;cursor:pointer;letter-spacing:.03em;text-transform:uppercase;box-shadow:0 2px 8px rgba(139,26,26,.28);margin-bottom:.4rem">&#128228; Post End-of-Day to Slack</button>
+    <div style="display:flex;gap:.4rem">
+      <button onclick="saveEodImageOnly()" style="flex:1;padding:.5rem;font-size:11.5px;font-weight:700;background:#fff;color:var(--text-sec);border:1px solid var(--border);border-radius:9px;cursor:pointer">&#128190; Save Image Instead</button>
+      <button onclick="configureSlackPost()" style="flex:1;padding:.5rem;font-size:11.5px;font-weight:700;background:#fff;color:var(--text-sec);border:1px solid var(--border);border-radius:9px;cursor:pointer">&#9881; Configure Slack Posting</button>
+    </div>
+  </div>
+  <canvas id="eod-canvas" style="display:none"></canvas>
+</div>
+
 <!-- ═══ LOG ═══ -->
 <div id="tab-log" class="hidden log-page">
   <div class="log-summary" id="log-stats"></div>
   <div style="padding:.65rem 1rem 0">
-    <button onclick="shareEndOfDay()" style="width:100%;padding:.85rem;font-size:14px;font-weight:700;background:var(--red);color:#fff;border:none;border-radius:12px;cursor:pointer;letter-spacing:.03em;text-transform:uppercase;box-shadow:0 2px 8px rgba(139,26,26,.28);margin-bottom:.55rem">&#128228; End-of-Day Summary</button>
     <button id="sync-hist-btn" onclick="syncHistory()" style="width:100%;padding:.7rem;font-size:13px;font-weight:700;background:#fff;color:#8B1A1A;border:1.5px solid #8B1A1A;border-radius:10px;cursor:pointer">&#9729; Sync History to Cloud (one-time)</button>
   </div>
-  <canvas id="eod-canvas" style="display:none"></canvas>
   <div class="log-table-wrap">
     <div class="section-title" style="margin-bottom:.5rem">Recent Entries</div>
     <div id="log-body"></div>
@@ -289,6 +361,28 @@ const STORAGE_KEY = 'detergent_inventory_v5';
 const GAL = { drum: 30, ez: 2.5 };
 // Default container type per detergent (from your spreadsheet conversions)
 const DET_CTYPE = ["drum", "ez", "drum", "drum", "ez", "ez", "ez", "drum", "ez", "ez"];
+// Editable packaging classification — DET_CTYPE above is only the ORIGINAL
+// default. The real, current answer for "how is this detergent packaged" is
+// DB.ctype (editable in the Detergent Packaging tab), which falls back to the
+// default only for a detergent that's never been changed. This is the same
+// pattern as the Team Roster: hardcoded seed, then it becomes real app data.
+function detCtype(i){ return (DB.ctype && DB.ctype[i]!==undefined) ? DB.ctype[i] : DET_CTYPE[i]; }
+function ensureCtypeSeed(){
+  DB.ctype=DB.ctype||{};
+  let changed=false;
+  DETS.forEach((_,i)=>{ if(DB.ctype[i]===undefined){ DB.ctype[i]=DET_CTYPE[i]; changed=true; } });
+  if(changed) saveDB();
+}
+const CTYPE_SENTINEL_DATE='2020-01-01';
+function saveCtype(i, type){
+  DB.ctype=DB.ctype||{};
+  DB.ctype[i]=type;
+  saveDB();
+  const row=[CTYPE_SENTINEL_DATE, DETS[i], 'CType', 0, type, 0];
+  sendRows([row]);
+  showToast(DETS[i].split(' #')[0]+' now packaged in '+(type==='drum'?'drums':'EasyChem boxes')+' going forward');
+  renderCtypeList();
+}
 // Pod tank minimum levels (gallons) — from your Input Log conditional formatting
 const MIN_LEVEL = [10.0, 5.0, 10.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0];
 
@@ -444,20 +538,34 @@ async function cloudPullAll(silent){
   let raw;
   try{ raw=await graphGetAllRows(); }
   catch(e){ if(!silent) showToast('Could not reach the cloud workbook'); return false; }
-  // latest SavedAt wins per (date, item, area) — identical rule to Power BI
-  const best={};
+  // latest SavedAt wins per (date, item, area) — identical rule to Power BI.
+  // EXCEPTION: 'Fill' rows are an append-only event log (multiple fills of the
+  // same detergent can happen in one day), so they must never collapse into
+  // a single "latest" row the way a corrected reading does. They're keyed by
+  // their own SavedAt instead, which is unique per event. 'FillVoid' rows are
+  // the same kind of append-only event, referencing which Fill event they
+  // correct — a void never deletes the original, it just marks it.
+  const best={}, fillEvents={}, voidEvents={};
   raw.forEach(r=>{
     let [ed,det,area,qty,ct,gal,saved]=r;
     if(ed===null||ed===undefined||det===undefined||area===undefined) return;
     if(typeof ed==='number') ed=excelSerialToISO(ed);
     ed=String(ed).slice(0,10);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(ed)) return;
-    const key=ed+'|'+det+'|'+area;
     const ts=saved?String(saved):'0000';
+    if(area==='Fill'){
+      fillEvents[ts]={ed,det,qty:Number(qty)||0,ct:ct||'',gal:Number(gal)||0,ts};
+      return;
+    }
+    if(area==='FillVoid'){
+      voidEvents[ts]={ct:ct||'',ts};
+      return;
+    }
+    const key=ed+'|'+det+'|'+area;
     if(!best[key]||ts>String(best[key].ts)) best[key]={ed,det,area,qty:Number(qty)||0,ct:ct||'',gal:Number(gal)||0,ts};
   });
   // rebuild the derived stores fresh from the deduped cloud rows
-  const nb={tank:{},onhand:{},ohqty:{},ohctype:{},delivery:{},delqty:{},delctype:{},cars:{},calc:{},orders:{}};
+  const nb={tank:{},onhand:{},ohqty:{},ohctype:{},delivery:{},delqty:{},delctype:{},cars:{},calc:{},orders:{},team:{},ctype:{}};
   const ctKey=s=>s==='30 Gal Drum'?'drum':s==='EasyChem Container'?'ez':null;
   Object.values(best).forEach(x=>{
     const di=DETS.indexOf(x.det), pi=PACKAGES.indexOf(x.det);
@@ -475,8 +583,27 @@ async function cloudPullAll(silent){
     else if(x.area==='Cars Washed'&&pi>=0){ (nb.cars[x.ed]=nb.cars[x.ed]||[0,0,0,0])[pi]=x.qty; }
     else if(x.area==='Calc Usage'&&di>=0){ (nb.calc[x.ed]=nb.calc[x.ed]||{})[di]=x.gal; }
     else if(x.area==='Ordered'&&di>=0){ (nb.orders[x.ed]=nb.orders[x.ed]||DETS.map(()=>0))[di]=x.qty; }
+    else if(x.area==='Team'){ nb.team[x.det]=x.qty>0; }
+    else if(x.area==='CType'){ const di2=DETS.indexOf(x.det); if(di2>=0) nb.ctype[di2]=x.ct; }
   });
-  ['tank','onhand','ohqty','ohctype','delivery','delqty','delctype','cars','calc','orders'].forEach(k=>{ DB[k]=nb[k]; });
+  const nbFills={};
+  const voidsByRef={};
+  Object.values(voidEvents).forEach(v=>{
+    const info=decodeVoidInfo(v.ct); if(!info) return;
+    // Latest void wins if a fill was somehow voided more than once
+    if(!voidsByRef[info.refTs] || v.ts>voidsByRef[info.refTs].ts){
+      voidsByRef[info.refTs]={voidedBy:info.voidedBy, reason:info.reason, ts:v.ts};
+    }
+  });
+  Object.values(fillEvents).forEach(x=>{
+    const di=DETS.indexOf(x.det); if(di<0) return;
+    const names=decodeFillNames(x.ct);
+    const voided=voidsByRef[x.ts]||null;
+    (nbFills[x.ed]=nbFills[x.ed]||[]).push({i:di, qty:x.qty, gal:x.gal, filler:names.filler, verifier:names.verifier, ts:x.ts, voided});
+  });
+  Object.keys(nbFills).forEach(d=>nbFills[d].sort((a,b)=>a.ts<b.ts?-1:1));
+  nb.fills=nbFills;
+  ['tank','onhand','ohqty','ohctype','delivery','delqty','delctype','cars','calc','orders','team','fills','ctype'].forEach(k=>{ DB[k]=nb[k]; });
   saveDB();
   rebuildDatePicker();
   renderDash();
@@ -552,6 +679,9 @@ function defaultDB(){
     calc:{"2025-12-23":{"0":7.722,"1":1.375,"2":4.361,"3":1.976,"4":0.471,"5":1.289,"6":2.749,"7":2.354,"8":0.0,"9":0.0},"2025-12-24":{"0":5.109,"1":0.901,"2":2.89,"3":1.295,"4":0.325,"5":0.897,"6":1.802,"7":1.623,"8":0.0,"9":0.0},"2025-12-26":{"0":10.877,"1":1.924,"2":6.151,"3":2.766,"4":0.684,"5":1.885,"6":3.848,"7":3.418,"8":0.0,"9":0.0},"2025-12-27":{"0":10.877,"1":1.924,"2":6.151,"3":2.766,"4":0.684,"5":1.885,"6":3.848,"7":3.418,"8":0.0,"9":0.0},"2025-12-28":{"0":0.949,"1":0.169,"2":0.538,"3":0.243,"4":0.059,"5":0.149,"6":0.338,"7":0.297,"8":0.0,"9":0.0},"2025-12-29":{"0":4.24,"1":0.754,"2":2.415,"3":1.084,"4":0.277,"5":0.707,"6":1.508,"7":1.385,"8":0.0,"9":0.0},"2025-12-30":{"0":8.776,"1":1.555,"2":4.965,"3":2.236,"4":0.55,"5":1.532,"6":3.111,"7":2.752,"8":0.0,"9":0.0},"2025-12-31":{"0":9.21,"1":1.63,"2":5.194,"3":2.343,"4":0.566,"5":1.572,"6":3.26,"7":2.829,"8":0.0,"9":0.0},"2026-01-01":{"0":3.307,"1":0.587,"2":1.878,"3":0.843,"4":0.213,"5":0.58,"6":1.173,"7":1.064,"8":0.0,"9":0.0},"2026-01-02":{"0":3.517,"1":0.622,"2":1.997,"3":0.894,"4":0.228,"5":0.61,"6":1.244,"7":1.141,"8":0.0,"9":0.0},"2026-01-03":{"0":5.182,"1":0.923,"2":2.92,"3":1.327,"4":0.31,"5":0.867,"6":1.846,"7":1.551,"8":0.0,"9":0.0},"2026-01-04":{"0":11.723,"1":2.086,"2":6.589,"3":2.999,"4":0.688,"5":2.016,"6":4.173,"7":3.442,"8":0.0,"9":0.0},"2026-01-05":{"0":9.09,"1":1.613,"2":5.143,"3":2.319,"4":0.568,"5":1.556,"6":3.226,"7":2.841,"8":0.0,"9":0.0},"2026-01-06":{"0":10.209,"1":1.809,"2":5.778,"3":2.601,"4":0.642,"5":1.717,"6":3.618,"7":3.21,"8":0.0,"9":0.0},"2026-01-07":{"0":8.757,"1":1.555,"2":4.948,"3":2.236,"4":0.54,"5":1.494,"6":3.111,"7":2.699,"8":0.0,"9":0.0},"2026-01-08":{"0":1.167,"1":0.206,"2":0.657,"3":0.297,"4":0.071,"5":0.195,"6":0.413,"7":0.357,"8":0.0,"9":0.0},"2026-01-09":{"0":7.203,"1":1.249,"2":4.145,"3":1.796,"4":0.54,"5":1.267,"6":2.499,"7":2.699,"8":0.0,"9":0.0},"2026-01-10":{"0":5.141,"1":0.908,"2":2.906,"3":1.305,"4":0.323,"5":0.857,"6":1.816,"7":1.617,"8":0.0,"9":0.0},"2026-01-11":{"0":5.713,"1":1.009,"2":3.247,"3":1.451,"4":0.374,"5":1.002,"6":2.019,"7":1.872,"8":0.0,"9":0.0},"2026-01-12":{"0":6.306,"1":1.114,"2":3.563,"3":1.602,"4":0.395,"5":1.084,"6":2.228,"7":1.973,"8":0.0,"9":0.0},"2026-01-13":{"0":4.04,"1":0.712,"2":2.278,"3":1.023,"4":0.251,"5":0.703,"6":1.424,"7":1.254,"8":0.0,"9":0.0},"2026-01-14":{"0":3.579,"1":0.636,"2":2.017,"3":0.914,"4":0.216,"5":0.62,"6":1.271,"7":1.082,"8":0.0,"9":0.0},"2026-01-15":{"0":4.107,"1":0.727,"2":2.301,"3":1.045,"4":0.239,"5":0.711,"6":1.454,"7":1.195,"8":0.0,"9":0.0},"2026-01-16":{"0":3.207,"1":0.57,"2":1.812,"3":0.819,"4":0.197,"5":0.552,"6":1.14,"7":0.987,"8":0.0,"9":0.0},"2026-01-17":{"0":1.481,"1":0.262,"2":0.838,"3":0.377,"4":0.094,"5":0.239,"6":0.524,"7":0.47,"8":0.0,"9":0.0},"2026-01-18":{"0":3.383,"1":0.6,"2":1.913,"3":0.863,"4":0.21,"5":0.548,"6":1.2,"7":1.052,"8":0.0,"9":0.0},"2026-01-19":{"0":2.702,"1":0.477,"2":1.539,"3":0.685,"4":0.181,"5":0.468,"6":0.954,"7":0.903,"8":0.0,"9":0.0},"2026-01-20":{"0":3.533,"1":0.626,"2":1.995,"3":0.899,"4":0.219,"5":0.618,"6":1.251,"7":1.094,"8":0.0,"9":0.0},"2026-01-21":{"0":5.35,"1":0.94,"2":3.014,"3":1.351,"4":0.333,"5":0.924,"6":1.88,"7":1.664,"8":0.0,"9":0.0},"2026-01-22":{"0":3.527,"1":0.629,"2":1.996,"3":0.904,"4":0.218,"5":0.588,"6":1.258,"7":1.088,"8":0.0,"9":0.0},"2026-01-23":{"0":0.465,"1":0.079,"2":0.266,"3":0.114,"4":0.034,"5":0.086,"6":0.159,"7":0.172,"8":0.0,"9":0.0},"2026-01-24":{"0":1.884,"1":0.335,"2":1.066,"3":0.481,"4":0.118,"5":0.311,"6":0.67,"7":0.588,"8":0.0,"9":0.0},"2026-01-25":{"0":3.947,"1":0.7,"2":2.244,"3":1.006,"4":0.257,"5":0.667,"6":1.4,"7":1.284,"8":0.0,"9":0.0},"2026-01-26":{"0":4.978,"1":0.884,"2":2.815,"3":1.271,"4":0.309,"5":0.827,"6":1.768,"7":1.545,"8":0.0,"9":0.0},"2026-01-27":{"0":6.037,"1":1.077,"2":3.39,"3":1.548,"4":0.349,"5":1.034,"6":2.154,"7":1.747,"8":0.0,"9":0.0},"2026-01-28":{"0":8.149,"1":1.451,"2":4.599,"3":2.085,"4":0.495,"5":1.395,"6":2.901,"7":2.473,"8":0.0,"9":0.0},"2026-01-29":{"0":6.675,"1":1.185,"2":3.772,"3":1.704,"4":0.413,"5":1.132,"6":2.37,"7":2.063,"8":0.0,"9":0.0},"2026-01-30":{"0":5.42,"1":0.962,"2":3.061,"3":1.383,"4":0.334,"5":0.936,"6":1.924,"7":1.67,"8":0.0,"9":0.0},"2026-01-31":{"0":6.502,"1":1.151,"2":3.684,"3":1.655,"4":0.414,"5":1.118,"6":2.303,"7":2.068,"8":0.0,"9":0.0},"2026-02-01":{"0":10.733,"1":1.924,"2":6.056,"3":2.766,"4":0.636,"5":1.811,"6":3.848,"7":3.18,"8":0.0,"9":0.0},"2026-02-02":{"0":11.155,"1":1.987,"2":6.264,"3":2.856,"4":0.649,"5":1.883,"6":3.973,"7":3.245,"8":0.0,"9":0.0},"2026-02-03":{"0":5.668,"1":1.006,"2":3.197,"3":1.446,"4":0.346,"5":0.984,"6":2.012,"7":1.73,"8":0.0,"9":0.0},"2026-02-04":{"0":5.002,"1":0.894,"2":2.823,"3":1.286,"4":0.3,"5":0.847,"6":1.789,"7":1.498,"8":0.0,"9":0.0},"2026-02-05":{"0":13.322,"1":2.369,"2":7.497,"3":3.405,"4":0.793,"5":2.281,"6":4.737,"7":3.965,"8":0.0,"9":0.0},"2026-02-06":{"0":10.044,"1":1.787,"2":5.651,"3":2.569,"4":0.596,"5":1.688,"6":3.574,"7":2.978,"8":0.0,"9":0.0},"2026-02-07":{"0":9.099,"1":1.616,"2":5.125,"3":2.323,"4":0.547,"5":1.544,"6":3.233,"7":2.734,"8":0.0,"9":0.0},"2026-02-08":{"0":9.222,"1":1.654,"2":5.181,"3":2.377,"4":0.527,"5":1.512,"6":3.307,"7":2.633,"8":0.0,"9":0.0},"2026-02-09":{"0":7.297,"1":1.307,"2":4.103,"3":1.879,"4":0.422,"5":1.197,"6":2.614,"7":2.11,"8":0.0,"9":0.0},"2026-02-10":{"0":5.773,"1":1.03,"2":3.258,"3":1.48,"4":0.348,"5":0.968,"6":2.059,"7":1.742,"8":0.0,"9":0.0},"2026-02-11":{"0":6.41,"1":1.146,"2":3.603,"3":1.648,"4":0.371,"5":1.072,"6":2.293,"7":1.854,"8":0.0,"9":0.0},"2026-02-12":{"0":6.212,"1":1.106,"2":3.53,"3":1.589,"4":0.398,"5":1.078,"6":2.211,"7":1.991,"8":0.0,"9":0.0},"2026-02-13":{"0":8.892,"1":1.581,"2":4.998,"3":2.272,"4":0.524,"5":1.486,"6":3.162,"7":2.621,"8":0.0,"9":0.0},"2026-02-14":{"0":7.54,"1":1.336,"2":4.261,"3":1.92,"4":0.47,"5":1.249,"6":2.671,"7":2.348,"8":0.0,"9":0.0},"2026-02-15":{"0":7.738,"1":1.376,"2":4.383,"3":1.978,"4":0.485,"5":1.319,"6":2.752,"7":2.425,"8":0.0,"9":0.0},"2026-02-16":{"0":6.778,"1":1.199,"2":3.836,"3":1.723,"4":0.429,"5":1.16,"6":2.397,"7":2.146,"8":0.0,"9":0.0},"2026-02-17":{"0":5.675,"1":0.994,"2":3.221,"3":1.429,"4":0.377,"5":0.99,"6":1.988,"7":1.884,"8":0.0,"9":0.0},"2026-02-18":{"0":7.353,"1":1.302,"2":4.157,"3":1.871,"4":0.46,"5":1.267,"6":2.604,"7":2.3,"8":0.0,"9":0.0},"2026-02-19":{"0":1.697,"1":0.296,"2":0.97,"3":0.425,"4":0.12,"5":0.299,"6":0.592,"7":0.6,"8":0.0,"9":0.0},"2026-02-20":{"0":4.861,"1":0.862,"2":2.76,"3":1.239,"4":0.313,"5":0.809,"6":1.725,"7":1.563,"8":0.0,"9":0.0},"2026-02-21":{"0":8.256,"1":1.468,"2":4.684,"3":2.11,"4":0.524,"5":1.397,"6":2.935,"7":2.621,"8":0.0,"9":0.0},"2026-02-22":{"0":5.789,"1":1.033,"2":3.252,"3":1.485,"4":0.335,"5":0.998,"6":2.066,"7":1.676,"8":0.0,"9":0.0},"2026-02-23":{"0":5.143,"1":0.916,"2":2.916,"3":1.317,"4":0.323,"5":0.887,"6":1.833,"7":1.617,"8":0.0,"9":0.0},"2026-02-24":{"0":8.561,"1":1.513,"2":4.839,"3":2.175,"4":0.537,"5":1.464,"6":3.026,"7":2.687,"8":0.0,"9":0.0},"2026-02-25":{"0":6.91,"1":1.222,"2":3.909,"3":1.757,"4":0.435,"5":1.187,"6":2.445,"7":2.175,"8":0.0,"9":0.0},"2026-02-26":{"0":11.455,"1":2.036,"2":6.476,"3":2.926,"4":0.709,"5":1.943,"6":4.071,"7":3.543,"8":0.0,"9":0.0},"2026-02-27":{"0":12.598,"1":2.252,"2":7.107,"3":3.237,"4":0.752,"5":2.14,"6":4.504,"7":3.762,"8":0.0,"9":0.0},"2026-02-28":{"0":9.158,"1":1.628,"2":5.171,"3":2.34,"4":0.56,"5":1.566,"6":3.256,"7":2.8,"8":0.0,"9":0.0},"2026-03-01":{"0":5.13,"1":0.921,"2":2.871,"3":1.325,"4":0.282,"5":0.837,"6":1.843,"7":1.409,"8":0.0,"9":0.0},"2026-03-02":{"0":5.237,"1":0.927,"2":2.961,"3":1.332,"4":0.328,"5":0.895,"6":1.853,"7":1.641,"8":0.0,"9":0.0},"2026-03-03":{"0":5.037,"1":0.893,"2":2.853,"3":1.283,"4":0.319,"5":0.877,"6":1.785,"7":1.593,"8":0.0,"9":0.0},"2026-03-04":{"0":5.993,"1":1.067,"2":3.393,"3":1.534,"4":0.373,"5":0.982,"6":2.134,"7":1.866,"8":0.0,"9":0.0},"2026-03-05":{"0":7.697,"1":1.366,"2":4.346,"3":1.964,"4":0.473,"5":1.317,"6":2.732,"7":2.366,"8":0.0,"9":0.0},"2026-03-06":{"0":4.973,"1":0.884,"2":2.818,"3":1.271,"4":0.313,"5":0.847,"6":1.768,"7":1.563,"8":0.0,"9":0.0},"2026-03-07":{"0":11.951,"1":2.13,"2":6.747,"3":3.062,"4":0.724,"5":1.996,"6":4.261,"7":3.62,"8":0.0,"9":0.0},"2026-03-08":{"0":10.289,"1":1.841,"2":5.799,"3":2.647,"4":0.607,"5":1.741,"6":3.682,"7":3.037,"8":0.0,"9":0.0},"2026-03-09":{"0":9.568,"1":1.694,"2":5.423,"3":2.435,"4":0.61,"5":1.662,"6":3.388,"7":3.049,"8":0.0,"9":0.0},"2026-03-10":{"0":6.439,"1":1.134,"2":3.627,"3":1.631,"4":0.397,"5":1.102,"6":2.269,"7":1.985,"8":0.0,"9":0.0},"2026-03-11":{"0":7.147,"1":1.27,"2":4.047,"3":1.825,"4":0.448,"5":1.207,"6":2.539,"7":2.241,"8":0.0,"9":0.0},"2026-03-12":{"0":6.471,"1":1.148,"2":3.658,"3":1.65,"4":0.402,"5":1.106,"6":2.296,"7":2.009,"8":0.0,"9":0.0},"2026-03-13":{"0":7.544,"1":1.339,"2":4.269,"3":1.925,"4":0.472,"5":1.309,"6":2.678,"7":2.36,"8":0.0,"9":0.0},"2026-03-14":{"0":7.517,"1":1.334,"2":4.26,"3":1.918,"4":0.476,"5":1.267,"6":2.668,"7":2.378,"8":0.0,"9":0.0},"2026-03-15":{"0":1.155,"1":0.206,"2":0.644,"3":0.297,"4":0.063,"5":0.205,"6":0.413,"7":0.315,"8":0.0,"9":0.0},"2026-03-16":{"0":7.13,"1":1.265,"2":4.032,"3":1.818,"4":0.445,"5":1.203,"6":2.529,"7":2.223,"8":0.0,"9":0.0},"2026-03-17":{"0":6.017,"1":1.077,"2":3.393,"3":1.548,"4":0.357,"5":1.008,"6":2.154,"7":1.783,"8":0.0,"9":0.0},"2026-03-18":{"0":16.452,"1":2.94,"2":9.269,"3":4.226,"4":0.972,"5":2.753,"6":5.88,"7":4.862,"8":0.0,"9":0.0},"2026-03-19":{"0":12.179,"1":2.179,"2":6.806,"3":3.133,"4":0.669,"5":2.062,"6":4.359,"7":3.346,"8":0.0,"9":0.0},"2026-03-20":{"0":11.962,"1":2.122,"2":6.756,"3":3.05,"4":0.738,"5":2.074,"6":4.244,"7":3.691,"8":0.0,"9":0.0},"2026-03-21":{"0":11.844,"1":2.096,"2":6.693,"3":3.014,"4":0.738,"5":2.0,"6":4.193,"7":3.691,"8":0.0,"9":0.0},"2026-03-22":{"0":7.16,"1":1.266,"2":4.041,"3":1.82,"4":0.443,"5":1.221,"6":2.533,"7":2.217,"8":0.0,"9":0.0},"2026-03-23":{"0":6.368,"1":1.123,"2":3.61,"3":1.614,"4":0.411,"5":1.1,"6":2.245,"7":2.057,"8":0.0,"9":0.0},"2026-03-24":{"0":6.683,"1":1.182,"2":3.777,"3":1.699,"4":0.418,"5":1.144,"6":2.364,"7":2.092,"8":0.0,"9":0.0},"2026-03-25":{"0":8.49,"1":1.508,"2":4.797,"3":2.168,"4":0.523,"5":1.456,"6":3.016,"7":2.615,"8":0.0,"9":0.0},"2026-03-26":{"0":6.751,"1":1.199,"2":3.812,"3":1.723,"4":0.415,"5":1.144,"6":2.397,"7":2.074,"8":0.0,"9":0.0},"2026-03-27":{"0":8.318,"1":1.469,"2":4.713,"3":2.112,"4":0.533,"5":1.419,"6":2.938,"7":2.663,"8":0.0,"9":0.0},"2026-03-28":{"0":7.279,"1":1.283,"2":4.127,"3":1.845,"4":0.471,"5":1.225,"6":2.566,"7":2.354,"8":0.0,"9":0.0},"2026-03-29":{"0":8.999,"1":1.598,"2":5.094,"3":2.297,"4":0.563,"5":1.518,"6":3.195,"7":2.817,"8":0.0,"9":0.0},"2026-03-30":{"0":7.685,"1":1.368,"2":4.317,"3":1.966,"4":0.449,"5":1.301,"6":2.736,"7":2.247,"8":0.0,"9":0.0},"2026-03-31":{"0":5.968,"1":1.058,"2":3.382,"3":1.521,"4":0.378,"5":1.04,"6":2.117,"7":1.89,"8":0.0,"9":0.0},"2026-04-01":{"0":2.022,"1":0.36,"2":1.138,"3":0.518,"4":0.12,"5":0.333,"6":0.72,"7":0.6,"8":0.0,"9":0.0},"2026-04-02":{"0":3.308,"1":0.583,"2":1.881,"3":0.838,"4":0.219,"5":0.576,"6":1.167,"7":1.094,"8":0.0,"9":0.0},"2026-04-03":{"0":2.012,"1":0.35,"2":1.161,"3":0.503,"4":0.152,"5":0.353,"6":0.7,"7":0.761,"8":0.0,"9":0.0},"2026-04-04":{"0":8.024,"1":1.413,"2":4.576,"3":2.032,"4":0.543,"5":1.375,"6":2.827,"7":2.716,"8":0.0,"9":0.0},"2026-04-06":{"0":6.854,"1":1.212,"2":3.851,"3":1.743,"4":0.409,"5":1.185,"6":2.424,"7":2.045,"8":0.0,"9":0.0},"2026-04-07":{"0":7.093,"1":1.27,"2":4.009,"3":1.825,"4":0.428,"5":1.207,"6":2.539,"7":2.14,"8":0.0,"9":0.0},"2026-04-08":{"0":11.07,"1":1.961,"2":6.239,"3":2.819,"4":0.674,"5":1.929,"6":3.922,"7":3.37,"8":0.0,"9":0.0},"2026-04-09":{"0":2.4,"1":0.424,"2":1.356,"3":0.61,"4":0.15,"5":0.424,"6":0.849,"7":0.749,"8":0.0,"9":0.0},"2026-04-10":{"0":8.68,"1":1.53,"2":4.9,"3":2.199,"4":0.543,"5":1.532,"6":3.06,"7":2.716,"8":0.0,"9":0.0},"2026-04-11":{"0":4.664,"1":0.822,"2":2.649,"3":1.181,"4":0.307,"5":0.791,"6":1.643,"7":1.534,"8":0.0,"9":0.0},"2026-04-12":{"0":8.652,"1":1.539,"2":4.872,"3":2.212,"4":0.517,"5":1.494,"6":3.077,"7":2.586,"8":0.0,"9":0.0},"2026-04-13":{"0":8.362,"1":1.481,"2":4.704,"3":2.129,"4":0.502,"5":1.427,"6":2.962,"7":2.508,"8":0.0,"9":0.0},"2026-04-14":{"0":7.591,"1":1.353,"2":4.288,"3":1.944,"4":0.462,"5":1.331,"6":2.705,"7":2.312,"8":0.0,"9":0.0},"2026-04-15":{"0":8.084,"1":1.429,"2":4.538,"3":2.054,"4":0.48,"5":1.401,"6":2.857,"7":2.401,"8":0.0,"9":0.0},"2026-04-16":{"0":10.254,"1":1.833,"2":5.773,"3":2.635,"4":0.603,"5":1.747,"6":3.665,"7":3.014,"8":0.0,"9":0.0},"2026-04-17":{"0":6.915,"1":1.224,"2":3.9,"3":1.76,"4":0.424,"5":1.158,"6":2.448,"7":2.122,"8":0.0,"9":0.0},"2026-04-18":{"0":7.997,"1":1.413,"2":4.506,"3":2.032,"4":0.49,"5":1.357,"6":2.827,"7":2.449,"8":0.0,"9":0.0},"2026-04-19":{"0":6.985,"1":1.249,"2":3.922,"3":1.796,"4":0.401,"5":1.162,"6":2.499,"7":2.003,"8":0.0,"9":0.0},"2026-04-20":{"0":7.652,"1":1.369,"2":4.287,"3":1.969,"4":0.429,"5":1.271,"6":2.739,"7":2.146,"8":0.0,"9":0.0},"2026-04-21":{"0":7.982,"1":1.413,"2":4.538,"3":2.032,"4":0.521,"5":1.399,"6":2.827,"7":2.603,"8":0.0,"9":0.0},"2026-04-22":{"0":7.805,"1":1.385,"2":4.399,"3":1.99,"4":0.473,"5":1.333,"6":2.769,"7":2.366,"8":0.0,"9":0.0},"2026-04-23":{"0":4.881,"1":0.864,"2":2.761,"3":1.242,"4":0.307,"5":0.835,"6":1.728,"7":1.534,"8":0.0,"9":0.0},"2026-04-24":{"0":9.383,"1":1.67,"2":5.285,"3":2.401,"4":0.56,"5":1.608,"6":3.341,"7":2.8,"8":0.0,"9":0.0},"2026-04-25":{"0":4.6,"1":0.81,"2":2.59,"3":1.17,"4":0.28,"5":0.78,"6":1.63,"7":1.4,"8":0.0,"9":0.0},"2026-04-26":{"0":2.308,"1":0.409,"2":1.305,"3":0.588,"4":0.144,"5":0.373,"6":0.818,"7":0.719,"8":0.0,"9":0.0},"2026-04-27":{"0":2.519,"1":0.448,"2":1.425,"3":0.644,"4":0.156,"5":0.436,"6":0.896,"7":0.779,"8":0.0,"9":0.0},"2026-04-28":{"0":5.484,"1":0.969,"2":3.067,"3":1.393,"4":0.316,"5":0.962,"6":1.938,"7":1.581,"8":0.0,"9":0.0},"2026-04-29":{"0":8.682,"1":1.53,"2":4.906,"3":2.199,"4":0.548,"5":1.516,"6":3.06,"7":2.74,"8":0.0,"9":0.0},"2026-04-30":{"0":6.724,"1":1.187,"2":3.788,"3":1.706,"4":0.413,"5":1.168,"6":2.374,"7":2.063,"8":0.0,"9":0.0},"2026-05-01":{"0":7.776,"1":1.386,"2":4.379,"3":1.993,"4":0.461,"5":1.299,"6":2.773,"7":2.306,"8":0.0,"9":0.0},"2026-05-02":{"0":8.498,"1":1.508,"2":4.787,"3":2.168,"4":0.512,"5":1.425,"6":3.016,"7":2.562,"8":0.0,"9":0.0},"2026-05-03":{"0":8.217,"1":1.461,"2":4.617,"3":2.1,"4":0.483,"5":1.377,"6":2.922,"7":2.413,"8":0.0,"9":0.0},"2026-05-04":{"0":7.985,"1":1.418,"2":4.497,"3":2.039,"4":0.479,"5":1.361,"6":2.837,"7":2.395,"8":0.0,"9":0.0},"2026-05-05":{"0":6.667,"1":1.163,"2":3.781,"3":1.672,"4":0.445,"5":1.181,"6":2.326,"7":2.223,"8":0.0,"9":0.0},"2026-05-06":{"0":7.122,"1":1.251,"2":4.028,"3":1.798,"4":0.456,"5":1.247,"6":2.502,"7":2.282,"8":0.0,"9":0.0},"2026-05-07":{"0":7.753,"1":1.378,"2":4.347,"3":1.981,"4":0.448,"5":1.309,"6":2.756,"7":2.241,"8":0.0,"9":0.0},"2026-05-08":{"0":9.724,"1":1.718,"2":5.499,"3":2.469,"4":0.613,"5":1.69,"6":3.436,"7":3.067,"8":0.0,"9":0.0},"2026-05-09":{"0":10.581,"1":1.865,"2":5.973,"3":2.681,"4":0.662,"5":1.817,"6":3.73,"7":3.311,"8":0.0,"9":0.0},"2026-05-10":{"0":8.847,"1":1.574,"2":4.983,"3":2.263,"4":0.529,"5":1.488,"6":3.148,"7":2.645,"8":0.0,"9":0.0},"2026-05-11":{"0":9.329,"1":1.675,"2":5.241,"3":2.409,"4":0.53,"5":1.55,"6":3.351,"7":2.651,"8":0.0,"9":0.0},"2026-05-12":{"0":9.33,"1":1.68,"2":5.24,"3":2.41,"4":0.53,"5":1.55,"6":3.35,"7":2.65,"8":0.0,"9":0.0},"2026-05-13":{"0":9.97,"1":1.76,"2":5.62,"3":2.53,"4":0.61,"5":1.71,"6":3.53,"7":3.06,"8":0.0,"9":0.0},"2026-05-14":{"0":9.968,"1":1.763,"2":5.62,"3":2.535,"4":0.611,"5":1.711,"6":3.527,"7":3.055,"8":0.0,"9":0.0},"2026-05-15":{"0":8.685,"1":1.535,"2":4.904,"3":2.207,"4":0.541,"5":1.484,"6":3.07,"7":2.704,"8":0.0,"9":0.0},"2026-05-16":{"0":8.43,"1":1.486,"2":4.744,"3":2.136,"4":0.515,"5":1.474,"6":2.972,"7":2.574,"8":0.0,"9":0.0},"2026-05-17":{"0":6.203,"1":1.101,"2":3.491,"3":1.582,"4":0.372,"5":1.062,"6":2.201,"7":1.86,"8":0.0,"9":0.0},"2026-05-19":{"0":6.171,"1":1.094,"2":3.5,"3":1.572,"4":0.395,"5":1.062,"6":2.188,"7":1.973,"8":0.0,"9":0.0},"2026-05-20":{"0":5.962,"1":1.05,"2":3.358,"3":1.509,"4":0.367,"5":1.048,"6":2.1,"7":1.837,"8":0.0,"9":0.0},"2026-05-21":{"0":5.546,"1":0.982,"2":3.122,"3":1.412,"4":0.335,"5":0.946,"6":1.965,"7":1.676,"8":0.0,"9":0.0},"2026-05-22":{"0":5.546,"1":0.982,"2":3.122,"3":1.412,"4":0.335,"5":0.946,"6":1.965,"7":1.676,"8":0.0,"9":0.0},"2026-05-23":{"0":8.471,"1":1.501,"2":4.79,"3":2.158,"4":0.529,"5":1.425,"6":3.003,"7":2.645,"8":0.0,"9":0.0},"2026-05-24":{"0":7.673,"1":1.356,"2":4.342,"3":1.949,"4":0.486,"5":1.309,"6":2.712,"7":2.431,"8":0.0,"9":0.0},"2026-05-25":{"0":6.97,"1":1.23,"2":3.93,"3":1.77,"4":0.42,"5":1.18,"6":2.47,"7":2.12,"8":0.0,"9":0.0},"2026-05-26":{"0":7.837,"1":1.398,"2":4.412,"3":2.01,"4":0.462,"5":1.343,"6":2.796,"7":2.312,"8":0.0,"9":0.0},"2026-05-27":{"0":7.624,"1":1.349,"2":4.298,"3":1.939,"4":0.467,"5":1.281,"6":2.698,"7":2.336,"8":0.0,"9":0.0},"2026-05-28":{"0":6.892,"1":1.231,"2":3.882,"3":1.769,"4":0.408,"5":1.183,"6":2.462,"7":2.039,"8":0.0,"9":0.0},"2026-05-29":{"0":4.955,"1":0.871,"2":2.797,"3":1.252,"4":0.313,"5":0.875,"6":1.741,"7":1.563,"8":0.0,"9":0.0},"2026-05-30":{"0":5.361,"1":0.948,"2":3.029,"3":1.363,"4":0.334,"5":0.926,"6":1.897,"7":1.67,"8":0.0,"9":0.0},"2026-05-31":{"0":7.376,"1":1.315,"2":4.176,"3":1.891,"4":0.456,"5":1.243,"6":2.631,"7":2.282,"8":0.0,"9":0.0},"2026-06-01":{"0":7.866,"1":1.391,"2":4.438,"3":2.0,"4":0.485,"5":1.357,"6":2.783,"7":2.425,"8":0.0,"9":0.0},"2026-06-02":{"0":6.412,"1":1.141,"2":3.624,"3":1.641,"4":0.393,"5":1.084,"6":2.282,"7":1.967,"8":0.0,"9":0.0},"2026-06-03":{"0":7.017,"1":1.246,"2":3.945,"3":1.791,"4":0.416,"5":1.203,"6":2.492,"7":2.08,"8":0.0,"9":0.0},"2026-06-04":{"0":2.597,"1":0.458,"2":1.467,"3":0.659,"4":0.163,"5":0.45,"6":0.916,"7":0.814,"8":0.0,"9":0.0},"2026-06-05":{"0":8.511,"1":1.505,"2":4.808,"3":2.163,"4":0.531,"5":1.464,"6":3.009,"7":2.657,"8":0.0,"9":0.0},"2026-06-06":{"0":7.885,"1":1.397,"2":4.442,"3":2.007,"4":0.479,"5":1.337,"6":2.793,"7":2.395,"8":0.0,"9":0.0},"2026-06-07":{"0":5.173,"1":0.925,"2":2.908,"3":1.329,"4":0.3,"5":0.889,"6":1.85,"7":1.498,"8":0.0,"9":0.0},"2026-06-08":{"0":6.985,"1":1.244,"2":3.949,"3":1.789,"4":0.429,"5":1.205,"6":2.489,"7":2.146,"8":0.0,"9":0.0},"2026-06-09":{"0":7.213,"1":1.288,"2":4.069,"3":1.852,"4":0.432,"5":1.211,"6":2.577,"7":2.158,"8":0.0,"9":0.0},"2026-06-10":{"0":7.813,"1":1.381,"2":4.438,"3":1.986,"4":0.509,"5":1.321,"6":2.763,"7":2.544,"8":0.0,"9":0.0},"2026-06-11":{"0":7.011,"1":1.249,"2":3.957,"3":1.796,"4":0.424,"5":1.213,"6":2.499,"7":2.122,"8":0.0,"9":0.0},"2026-06-12":{"0":8.596,"1":1.532,"2":4.844,"3":2.202,"4":0.514,"5":1.458,"6":3.064,"7":2.568,"8":0.0,"9":0.0},"2026-06-13":{"0":4.444,"1":0.781,"2":2.517,"3":1.123,"4":0.288,"5":0.769,"6":1.562,"7":1.438,"8":0.0,"9":0.0},"2026-06-14":{"0":8.42,"1":1.496,"2":4.768,"3":2.151,"4":0.528,"5":1.438,"6":2.993,"7":2.639,"8":0.0,"9":0.0},"2026-06-15":{"0":7.85,"1":1.4,"2":4.42,"3":2.012,"4":0.465,"5":1.329,"6":2.8,"7":2.324,"8":0.0,"9":0.0},"2026-06-16":{"0":6.999,"1":1.238,"2":3.956,"3":1.779,"4":0.439,"5":1.217,"6":2.475,"7":2.193,"8":0.0,"9":0.0},"2026-06-17":{"0":7.907,"1":1.408,"2":4.441,"3":2.025,"4":0.46,"5":1.363,"6":2.817,"7":2.3,"8":0.0,"9":0.0},"2026-06-18":{"0":8.207,"1":1.459,"2":4.588,"3":2.097,"4":0.462,"5":1.377,"6":2.918,"7":2.312,"8":0.0,"9":0.0},"2026-06-19":{"0":7.869,"1":1.393,"2":4.454,"3":2.003,"4":0.497,"5":1.353,"6":2.786,"7":2.485,"8":0.0,"9":0.0},"2026-06-20":{"0":6.27,"1":1.111,"2":3.551,"3":1.597,"4":0.397,"5":1.058,"6":2.222,"7":1.985,"8":0.0,"9":0.0},"2026-06-21":{"0":3.933,"1":0.697,"2":2.231,"3":1.001,"4":0.252,"5":0.673,"6":1.393,"7":1.26,"8":0.0,"9":0.0},"2026-06-22":{"0":7.184,"1":1.276,"2":4.044,"3":1.835,"4":0.429,"5":1.203,"6":2.553,"7":2.146,"8":0.0,"9":0.0},"2026-06-23":{"0":6.06,"1":1.075,"2":3.433,"3":1.546,"4":0.383,"5":1.046,"6":2.151,"7":1.914,"8":0.0,"9":0.0},"2026-06-24":{"0":6.835,"1":1.217,"2":3.85,"3":1.75,"4":0.408,"5":1.175,"6":2.435,"7":2.039,"8":0.0,"9":0.0},"2026-06-25":{"0":5.345,"1":0.947,"2":3.018,"3":1.361,"4":0.33,"5":0.916,"6":1.894,"7":1.652,"8":0.0,"9":0.0},"2026-06-26":{"0":8.484,"1":1.505,"2":4.78,"3":2.163,"4":0.514,"5":1.417,"6":3.009,"7":2.568,"8":0.0,"9":0.0},"2026-06-27":{"0":7.275,"1":1.28,"2":4.115,"3":1.84,"4":0.465,"5":1.263,"6":2.56,"7":2.324,"8":0.0,"9":0.0},"2026-06-28":{"0":7.856,"1":1.397,"2":4.455,"3":2.007,"4":0.497,"5":1.321,"6":2.793,"7":2.485,"8":0.0,"9":0.0},"2026-06-29":{"0":7.993,"1":1.427,"2":4.525,"3":2.051,"4":0.493,"5":1.357,"6":2.854,"7":2.467,"8":0.0,"9":0.0},"2026-06-30":{"0":7.864,"1":1.403,"2":4.42,"3":2.017,"4":0.458,"5":1.341,"6":2.807,"7":2.288,"8":0.0,"9":0.0},"2026-07-01":{"0":6.249,"1":1.106,"2":3.528,"3":1.589,"4":0.388,"5":1.078,"6":2.211,"7":1.938,"8":0.0,"9":0.0},"2026-07-02":{"0":7.703,"1":1.364,"2":4.353,"3":1.961,"4":0.479,"5":1.335,"6":2.729,"7":2.395,"8":0.0,"9":0.0},"2026-07-03":{"0":5.67,"1":1.011,"2":3.181,"3":1.453,"4":0.326,"5":0.958,"6":2.022,"7":1.629,"8":0.0,"9":0.0},"2026-07-04":{"0":3.246,"1":0.575,"2":1.831,"3":0.826,"4":0.2,"5":0.56,"6":1.15,"7":0.999,"8":0.0,"9":0.0},"2026-07-05":{"0":7.634,"1":1.373,"2":4.302,"3":1.973,"4":0.443,"5":1.265,"6":2.746,"7":2.217,"8":0.0,"9":0.0},"2026-07-06":{"0":8.339,"1":1.478,"2":4.694,"3":2.124,"4":0.503,"5":1.434,"6":2.955,"7":2.514,"8":0.0,"9":0.0},"2026-07-07":{"0":7.003,"1":1.241,"2":3.96,"3":1.784,"4":0.437,"5":1.201,"6":2.482,"7":2.187,"8":0.0,"9":0.0},"2026-07-08":{"0":6.398,"1":1.146,"2":3.588,"3":1.648,"4":0.361,"5":1.062,"6":2.293,"7":1.807,"8":0.0,"9":0.0},"2026-07-09":{"0":6.313,"1":1.114,"2":3.579,"3":1.602,"4":0.407,"5":1.088,"6":2.228,"7":2.033,"8":0.0,"9":0.0},"2026-07-10":{"0":6.69,"1":1.187,"2":3.782,"3":1.706,"4":0.416,"5":1.128,"6":2.374,"7":2.08,"8":0.0,"9":0.0}},
     cars:{},
     orders:{},
+    fills:{},
+    team:{},
+    ctype:{},
     delqty:{},
     ohctype:{},
     delctype:{},
@@ -562,8 +692,9 @@ function defaultDB(){
 let DB = loadDB();
 let entryState = {
   tank:     DETS.map(()=>({qty:0})),
-  onhand:   DETS.map((_,i)=>({qty:0,ctype:DET_CTYPE[i]})),
-  delivery: DETS.map((_,i)=>({qty:0,ctype:DET_CTYPE[i]})),
+  onhand:   DETS.map((_,i)=>({qty:0,ctype:detCtype(i)})),
+  delivery: DETS.map((_,i)=>({qty:0,ctype:detCtype(i)})),
+  fill:     [{qty:0,ctype:'drum'}],   // single active slot — Fill handles one detergent at a time
 };
 
 function loadDB() {
@@ -705,7 +836,7 @@ function refillSuggestion(i,date){
   if(tk>=rl) return null;
   // Drums: whole 30-gal drums. EasyChem: whole BOXES (2 jugs x 2.5 gal = 5 gal) —
   // boxes always go in complete, so no loose jugs sit in storage.
-  const ct=DET_CTYPE[i];
+  const ct=detCtype(i);
   const unit=ct==='drum'?30:5;
   const n=Math.max(1,Math.ceil((rl-tk)/unit));
   const resulting=tk+n*unit;
@@ -735,8 +866,8 @@ function orderArrival(fromDate){
   const cal=Math.round((new Date(arrive)-new Date(fromDate))/86400000);   // calendar days of consumption
   return {date:arrive, calDays:cal};
 }
-const ORDER_UNIT_GAL = i => DET_CTYPE[i]==='drum' ? 30 : 5;   // drums vs BOXES (2 jugs)
-const ORDER_UNIT_NAME = (i,n) => DET_CTYPE[i]==='drum' ? (n===1?'drum':'drums') : (n===1?'box':'boxes');
+const ORDER_UNIT_GAL = i => detCtype(i)==='drum' ? 30 : 5;   // drums vs BOXES (2 jugs)
+const ORDER_UNIT_NAME = (i,n) => detCtype(i)==='drum' ? (n===1?'drum':'drums') : (n===1?'box':'boxes');
 
 // ── ON-ORDER TRACKING (reconciliation model) ──
 // Recorded deliveries CONSUME open order quantities, gallon for gallon, oldest order
@@ -864,7 +995,7 @@ function distributeExtras(needs, date, extraD, extraE){
     for(let n=0;n<count;n++){
       let bi=-1, bd=Infinity;
       DETS.forEach((_,i)=>{
-        if(DET_CTYPE[i]!==type) return;
+        if(detCtype(i)!==type) return;
         const d=daysAfter(i,date,needs[i].units+adds[i]);
         const score=d===null?Infinity-1:d;      // zero-usage detergents only as last resort
         if(score<bd){bd=score;bi=i;}
@@ -891,14 +1022,14 @@ function needsAttention(date){
       const add=rs?` — add ${rs.label} (→ ${fmt(rs.resulting,1)} gal${rs.days?', ≈'+fmt(rs.days,1)+' days':''})`:' — refill';
       alerts.push({type:'tank',i,name,msg:`Pod tank at ${fmt(tk,1)} gal (refill level ${fmt(rl,1)})${add}`,sev:'red'});
     }
-    const act=trailingMedianDet(i,date), calc=calcMedianDet(i,date), base=baselineRatio(i,date);
-    if(act!==null&&calc!==null&&base!==null&&calc>=VARIANCE_MIN_GAL){
-      const expected=calc*base;           // what "normal" looks like for THIS detergent
-      if(expected>0){
-        const drift=(act-expected)/expected;
-        if(drift>VARIANCE_PCT) alerts.push({type:'var',i,name,msg:`Using ${fmt(act,1)} gal/day vs ~${fmt(expected,1)} normal (+${Math.round(drift*100)}%) — usage is unusually high`,sev:'amber'});
-        else if(drift<-VARIANCE_PCT) alerts.push({type:'var',i,name,msg:`Using ${fmt(act,1)} gal/day vs ~${fmt(expected,1)} normal (${Math.round(drift*100)}%) — usage is unusually low`,sev:'red'});
-      }
+    // Simplified on purpose: compare the SAME two numbers already shown on the
+    // detergent's card (Daily Usage vs 7-day Avg), so the alert is never citing
+    // a number the person can't also see and check for themselves.
+    const act=dailyUsageDet(i,date), expected=trailingAvgDet(i,date);
+    if(act!==null&&expected!==null&&expected>=VARIANCE_MIN_GAL){
+      const drift=(act-expected)/expected;
+      if(drift>VARIANCE_PCT) alerts.push({type:'var',i,name,msg:`Using ${fmt(act,1)} gal/day vs ~${fmt(expected,1)} 7-day avg (+${Math.round(drift*100)}%) — usage is unusually high`,sev:'amber'});
+      else if(drift<-VARIANCE_PCT) alerts.push({type:'var',i,name,msg:`Using ${fmt(act,1)} gal/day vs ~${fmt(expected,1)} 7-day avg (${Math.round(drift*100)}%) — usage is unusually low`,sev:'red'});
     }
   });
   // Triage order: tank refills first (act now), usage anomalies next (investigate), reorders last (desk work)
@@ -947,7 +1078,7 @@ function loadExisting(tab){
     const ctKey=tab==='onhand'?'ohctype':'delctype';
     const gals=(DB[dbKey]||{})[date], q=(DB[qtyKey]||{})[date], c=(DB[ctKey]||{})[date];
     DETS.forEach((_,i)=>{
-      const ct=(c&&c[i])?c[i]:DET_CTYPE[i];
+      const ct=(c&&c[i])?c[i]:detCtype(i);
       entryState[tab][i].ctype=ct;
       let qty=0;
       if(q&&q[i]!==undefined) qty=q[i];
@@ -1456,19 +1587,33 @@ function renderLog(){
 // NAVIGATION
 // ═══════════════════════════════════════════════
 function switchTab(name){
-  const tabs=['dashboard','tank','onhand','delivery','cars','order','log'];
+  const tabs=['dashboard','tank','onhand','delivery','fill','cars','order','team','report','log'];
   tabs.forEach(t=>{
     // Only toggle the hidden class — never touch inline styles,
     // because the entry tabs rely on style="display:flex" for their layout
     document.getElementById('tab-'+t).classList.toggle('hidden',t!==name);
   });
-  document.querySelectorAll('.tab-nav-item').forEach((el,i)=>{
-    el.classList.toggle('active',tabs[i]===name);
+  document.querySelectorAll('.drawer-item').forEach(el=>{
+    el.classList.toggle('active', el.dataset.tab===name);
   });
+  closeDrawer();
   if(name==='log') renderLog();
+  if(name==='team') renderTeamList();
+  if(name==='fill') renderFillTab();
   if(name==='order'){ if(!orderUnits) orderReset(); else renderOrder(); }
   if(name==='dashboard') renderDash();
 }
+function openDrawer(){
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-backdrop').classList.add('open');
+}
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-backdrop').classList.remove('open');
+}
+document.querySelectorAll('.drawer-item').forEach(el=>{
+  el.addEventListener('click', ()=>switchTab(el.dataset.tab));
+});
 
 function showToast(msg){
   const t=document.getElementById('toast');
@@ -1507,7 +1652,7 @@ function saveOrder(){
   const rows=[], logs=[];
   DETS.forEach((n,i)=>{
     if(orderUnits[i]>0){
-      const ct=DET_CTYPE[i]==='drum'?'30 Gal Drum':'EasyChem Box';
+      const ct=detCtype(i)==='drum'?'30 Gal Drum':'EasyChem Box';
       rows.push([date,n,'Ordered',orderUnits[i],ct,orderUnits[i]*ORDER_UNIT_GAL(i)]);
       logs.push({date,det:n,area:'Ordered',qty:orderUnits[i],meas:ct,gal:orderUnits[i]*ORDER_UNIT_GAL(i),color:DET_COLORS[i].bg});
     }
@@ -1555,7 +1700,7 @@ function renderOrder(){
     c.appendChild(div);
   });
   let D=0,E=0;
-  DETS.forEach((_,i)=>{ if(DET_CTYPE[i]==='drum')D+=orderUnits[i]||0; else E+=orderUnits[i]||0; });
+  DETS.forEach((_,i)=>{ if(detCtype(i)==='drum')D+=orderUnits[i]||0; else E+=orderUnits[i]||0; });
   const planEl=document.getElementById('order-plan');
   const plan=planSkids(D,E);
   if(!plan||plan.none){
@@ -1595,165 +1740,440 @@ function renderOrder(){
 // ── END-OF-DAY SUMMARY IMAGE (for Slack) ──
 function buildEodCanvas(date){
   const cv=document.getElementById('eod-canvas');
-  const scale=2;                                   // retina-crisp
-  const W=960, rowH=46, headH=150, foot=54;
-  const H=headH+rowH*DETS.length+foot+34+22;   // +room for optional neg-usage banner
-  cv.width=W*scale; cv.height=H*scale;
-  const x=cv.getContext('2d'); x.scale(scale,scale);
-  const RED='#8B1A1A', INK='#16181D', SUB='#6A7180', LINE='#E7E9ED';
-  // bg
-  x.fillStyle='#FFFFFF'; x.fillRect(0,0,W,H);
-  // header band
-  const g=x.createLinearGradient(0,0,0,headH); g.addColorStop(0,'#8F1C1C'); g.addColorStop(1,'#7A1515');
-  x.fillStyle=g; x.fillRect(0,0,W,headH);
-  x.fillStyle='#C0392B'; x.fillRect(0,headH-5,W,5);
-  x.fillStyle='rgba(255,255,255,.62)'; x.font='700 13px Arial'; x.textBaseline='alphabetic';
-  x.fillText("TOMMY'S EXPRESS · NE43", 26, 42);
-  x.fillStyle='#FFFFFF'; x.font='800 32px Arial';
-  x.fillText('End-of-Day Detergent Report', 26, 82);
-  const dObj=new Date(date+'T12:00:00');
-  x.fillStyle='rgba(255,255,255,.9)'; x.font='600 17px Arial';
-  x.fillText(dObj.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}), 26, 112);
-  // cars washed for the day, right-aligned
-  const cars=(DB.cars[date]||[]).reduce((a,b)=>a+(b||0),0);
-  if(cars>0){
-    x.textAlign='right';
-    x.fillStyle='rgba(255,255,255,.62)'; x.font='700 12px Arial';
-    x.fillText('CARS WASHED', W-26, 60);
-    x.fillStyle='#FFFFFF'; x.font='800 40px Arial';
-    x.fillText(String(cars), W-26, 100);
-    x.textAlign='left';
-  }
-  // column headers
-  let y=headH+30;
-  x.fillStyle=SUB; x.font='700 12px Arial';
-  x.fillText('DETERGENT', 26, y);
-  x.textAlign='right';
-  x.fillText('USED', 400, y);
-  x.fillText('EXPECTED', 520, y);
-  x.fillText('DELIVERED', 650, y);
-  x.fillText('ON HAND', 770, y);
-  x.fillText('DAYS', 850, y);
-  x.textAlign='center';
-  x.fillText('A.M. FILL', W-58, y);
-  x.textAlign='left';
-  y+=12; x.strokeStyle=LINE; x.lineWidth=1; x.beginPath(); x.moveTo(26,y); x.lineTo(W-26,y); x.stroke();
-  // rows
-  let negCount=0;
-  DETS.forEach((name,i)=>{
-    const ry=y+8+i*rowH;
-    const c=DET_COLORS[i];
-    // negative-usage highlight band (drawn first, behind everything)
-    const uNeg=dailyUsageDet(i,date);
-    if(uNeg!==null && uNeg<0){
-      negCount++;
-      x.fillStyle='#FCE8E6'; x.fillRect(14, ry, W-28, rowH);
-      x.fillStyle='#B03A2E'; x.fillRect(14, ry, 4, rowH);   // accent edge
-    }
-    // swatch
-    x.fillStyle=c.bg; roundRect(x,26,ry+rowH/2-13,16,26,4); x.fill();
-    // name
-    x.fillStyle=INK; x.font='700 16px Arial'; x.textBaseline='middle';
-    x.fillText(name, 52, ry+rowH/2);
-    // used today (actual)
+  const scale=2;
+  const W=960, rowH=52, headH=118, kpiH=64;
+  const RED='#8B1A1A', INK='#16181D', SUB='#6A7180', LINE='#E7E9ED', FAINT='#D8DBE0';
+  // Pre-compute row data + counts
+  const rows=DETS.map((name,i)=>{
     const used=dailyUsageDet(i,date);
-    x.textAlign='right';
-    x.font='600 16px Arial'; x.fillStyle=used!==null&&used<0?'#B03A2E':INK;
-    x.fillText(used!==null?fmt(used,1):'—', 400, ry+rowH/2);
-    // expected (calc) usage
     const calc=(DB.calc[date]||{})[i];
-    x.fillStyle=SUB; x.font='500 16px Arial';
-    x.fillText(calc!==undefined&&calc>0?fmt(calc,1):'—', 520, ry+rowH/2);
-    // delivered today — green when something arrived, gray dash otherwise
     const del=(DB.delivery[date]||{})[i]||0;
-    if(del>0){ x.fillStyle='#1A6B3C'; x.font='700 16px Arial'; x.fillText('+'+fmt(del,0), 650, ry+rowH/2); }
-    else { x.fillStyle='#C2C6CE'; x.font='600 16px Arial'; x.fillText('\u2014', 650, ry+rowH/2); }
-    // on hand
     const oh=totalGalDet(i,date);
-    x.fillStyle=INK; x.font='600 16px Arial';
-    x.fillText(fmt(oh,0), 770, ry+rowH/2);
-    // days left
     const doh=dohDet(i,date);
-    let dc=INK;
-    if(doh!==null){ if(doh<10)dc='#B03A2E'; else if(doh<20)dc='#B9770E'; }
-    x.fillStyle=dc; x.font='700 16px Arial';
-    x.fillText(doh!==null?fmt(doh,0):'—', 850, ry+rowH/2);
-    // A.M. fill flag — needs filling if tank below its refill level
     const tk=(DB.tank[date]||{})[i];
     const rl=refillLevel(i,date);
+    const fill=(tk!==undefined&&tk<rl)?refillSuggestion(i,date):null;
+    const needsFill=(tk!==undefined&&tk<rl);
+    return {name,i,used,calc,del,oh,doh,needsFill,fill};
+  });
+  const negCount=rows.filter(r=>r.used!==null&&r.used<0).length;
+  const cars=(DB.cars[date]||[]).reduce((a,b)=>a+(b||0),0);
+  const galUsed=rows.reduce((s,r)=>s+(r.used!==null&&r.used>0?r.used:0),0);
+  const delItems=rows.filter(r=>r.del>0).length;
+  const delGal=rows.reduce((s,r)=>s+r.del,0);
+  const fillCount=rows.filter(r=>r.needsFill).length;
+  const reorderCount=rows.filter(r=>r.doh!==null&&r.doh<20).length;
+  const warnH=negCount>0?40:0;
+  const H=headH+kpiH+44+rowH*DETS.length+warnH+40;
+  cv.width=W*scale; cv.height=H*scale;
+  const x=cv.getContext('2d'); x.scale(scale,scale);
+  x.fillStyle='#FFFFFF'; x.fillRect(0,0,W,H);
+
+  // ── HEADER (tight) ──
+  const g=x.createLinearGradient(0,0,0,headH); g.addColorStop(0,'#8F1C1C'); g.addColorStop(1,'#7A1515');
+  x.fillStyle=g; x.fillRect(0,0,W,headH);
+  x.fillStyle='rgba(255,255,255,.6)'; x.font='700 12px Arial'; x.textBaseline='alphabetic';
+  x.fillText("TOMMY'S EXPRESS \u00B7 NE43", 28, 34);
+  x.fillStyle='#FFFFFF'; x.font='800 30px Arial';
+  x.fillText('End-of-Day Detergent Report', 28, 70);
+  const dObj=new Date(date+'T12:00:00');
+  x.fillStyle='rgba(255,255,255,.88)'; x.font='600 15px Arial';
+  x.fillText(dObj.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}), 28, 96);
+
+  // ── KPI STRIP (the TL;DR — sits where Slack previews start) ──
+  const ky=headH;
+  x.fillStyle='#F7F3F0'; x.fillRect(0,ky,W,kpiH);
+  x.strokeStyle='#E8DFD8'; x.lineWidth=1; x.beginPath(); x.moveTo(0,ky+kpiH); x.lineTo(W,ky+kpiH); x.stroke();
+  const kpis=[
+    {label:'CARS WASHED', val:cars>0?String(cars):'\u2014', col:INK},
+    {label:'DELIVERED', val:delItems>0?delItems+' item'+(delItems>1?'s':'')+' \u00B7 '+fmt(delGal,0)+' gal':'\u2014', col:delItems>0?'#1A6B3C':SUB},
+    {label:'A.M. FILLS', val:fillCount>0?String(fillCount):'None', col:fillCount>0?'#B03A2E':'#1A6B3C'},
+    {label:'REORDER', val:reorderCount>0?String(reorderCount):'None', col:reorderCount>0?'#B9770E':'#1A6B3C'}
+  ];
+  const kw=W/kpis.length;
+  kpis.forEach((k,ki)=>{
+    const cx=ki*kw+24;
+    x.textAlign='left';
+    x.fillStyle=SUB; x.font='700 10.5px Arial';
+    x.fillText(k.label, cx, ky+26);
+    x.fillStyle=k.col; x.font='800 21px Arial';
+    x.fillText(k.val, cx, ky+50);
+    if(ki>0){ x.strokeStyle='#E8DFD8'; x.beginPath(); x.moveTo(ki*kw,ky+12); x.lineTo(ki*kw,ky+kpiH-12); x.stroke(); }
+  });
+
+  // ── COLUMN HEADERS ──
+  let y=ky+kpiH+30;
+  x.fillStyle=SUB; x.font='700 12px Arial';
+  x.textAlign='left'; x.fillText('DETERGENT', 28, y);
+  x.textAlign='right';
+  x.fillText('USED', 270, y);
+  x.fillText('EXPECTED', 395, y);
+  x.fillText('DELIVERED', 545, y);
+  x.fillText('ON HAND', 700, y);
+  x.textAlign='center';
+  x.fillText('DAYS', 800, y);
+  x.fillText('A.M. FILL', W-62, y);
+  x.textAlign='left';
+  y+=12; x.strokeStyle=LINE; x.beginPath(); x.moveTo(28,y); x.lineTo(W-28,y); x.stroke();
+
+  // ── ROWS ──
+  rows.forEach((r,idx)=>{
+    const ry=y+2+idx*rowH;
+    if(r.used!==null&&r.used<0){
+      x.fillStyle='#FCE8E6'; x.fillRect(16, ry, W-32, rowH);
+      x.fillStyle='#B03A2E'; x.fillRect(16, ry, 4, rowH);
+    }
+    const c=DET_COLORS[r.i];
+    x.fillStyle=c.bg; roundRect(x,28,ry+rowH/2-13,15,26,4); x.fill();
+    x.fillStyle=INK; x.font='700 18px Arial'; x.textBaseline='middle';
+    x.fillText(r.name, 54, ry+rowH/2);
+    x.textAlign='right';
+    x.font='700 18px Arial'; x.fillStyle=r.used!==null&&r.used<0?'#B03A2E':INK;
+    x.fillText(r.used!==null?fmt(r.used,1):'\u2014', 270, ry+rowH/2);
+    x.fillStyle='#3A3F4A'; x.font='700 17px Arial';
+    x.fillText(r.calc!==undefined&&r.calc>0?fmt(r.calc,1):'\u2014', 395, ry+rowH/2);
+    if(r.del>0){ x.fillStyle='#1A6B3C'; x.font='800 18px Arial'; x.fillText('+'+fmt(r.del,0), 545, ry+rowH/2); }
+    else { x.fillStyle=FAINT; x.font='600 17px Arial'; x.fillText('\u2014', 545, ry+rowH/2); }
+    x.fillStyle=INK; x.font='700 18px Arial';
+    x.fillText(fmt(r.oh,0), 700, ry+rowH/2);
+    // DAYS as a filled pill when action-worthy — survives Slack compression
     x.textAlign='center';
-    if(tk!==undefined && tk<rl){
-      const rs=refillSuggestion(i,date);
-      // red pill
-      const cx=W-58, cyy=ry+rowH/2;
-      x.fillStyle='#B03A2E'; roundRect(x,cx-42,cyy-13,84,26,13); x.fill();
-      x.fillStyle='#fff'; x.font='700 12px Arial';
-      x.fillText(rs?('+'+rs.label.toUpperCase()):'FILL', cx, cyy+1);
+    if(r.doh===null){
+      x.fillStyle=FAINT; x.font='600 17px Arial'; x.fillText('\u2014', 800, ry+rowH/2);
+    } else if(r.doh<10){
+      x.fillStyle='#B03A2E'; roundRect(x,800-30,ry+rowH/2-14,60,28,14); x.fill();
+      x.fillStyle='#fff'; x.font='800 16px Arial'; x.fillText(fmt(r.doh,0), 800, ry+rowH/2+1);
+    } else if(r.doh<20){
+      x.fillStyle='#F5E6C8'; roundRect(x,800-30,ry+rowH/2-14,60,28,14); x.fill();
+      x.fillStyle='#8E5B00'; x.font='800 16px Arial'; x.fillText(fmt(r.doh,0), 800, ry+rowH/2+1);
     } else {
-      x.font='600 17px Arial'; x.fillStyle='#C2C6CE';
-      x.fillText('\u2014', W-58, ry+rowH/2);
+      x.fillStyle=INK; x.font='700 18px Arial'; x.fillText(fmt(r.doh,0), 800, ry+rowH/2);
+    }
+    if(r.needsFill){
+      x.fillStyle='#B03A2E'; roundRect(x,W-62-46,ry+rowH/2-14,92,28,14); x.fill();
+      x.fillStyle='#fff'; x.font='800 12.5px Arial';
+      x.fillText(r.fill?('+'+r.fill.label.toUpperCase()):'FILL', W-62, ry+rowH/2+1);
+    } else {
+      x.fillStyle=FAINT; x.font='600 17px Arial'; x.fillText('\u2014', W-62, ry+rowH/2);
     }
     x.textAlign='left'; x.textBaseline='alphabetic';
-    // divider
-    x.strokeStyle=LINE; x.beginPath(); x.moveTo(26,ry+rowH); x.lineTo(W-26,ry+rowH); x.stroke();
+    x.strokeStyle=idx===DETS.length-1?'transparent':LINE;
+    x.beginPath(); x.moveTo(28,ry+rowH); x.lineTo(W-28,ry+rowH); x.stroke();
   });
-  // negative-usage warning banner (above the footer legend)
-  const fy0=headH+34+rowH*DETS.length;
+
+  // ── WARNING BANNER ──
+  const fy0=y+4+rowH*DETS.length;
   if(negCount>0){
-    x.fillStyle='#B03A2E'; roundRect(x,14,fy0+2,W-28,26,7); x.fill();
-    x.fillStyle='#fff'; x.font='700 13px Arial'; x.textBaseline='middle'; x.textAlign='left';
-    x.fillText('\u26A0  '+negCount+' detergent'+(negCount>1?'s':'')+' show negative usage — check for a missed delivery, refill, or wrong-date entry.', 26, fy0+15);
+    x.fillStyle='#B03A2E'; roundRect(x,16,fy0+4,W-32,30,8); x.fill();
+    x.fillStyle='#fff'; x.font='700 14px Arial'; x.textBaseline='middle'; x.textAlign='left';
+    x.fillText('\u26A0  '+negCount+' detergent'+(negCount>1?'s':'')+' show negative usage \u2014 check for a missed delivery, refill, or wrong-date entry.', 30, fy0+19);
   }
-  // footer
-  const fy=fy0+(negCount>0?46:30);
-  x.fillStyle=SUB; x.font='500 12px Arial'; x.textBaseline='middle'; x.textAlign='left';
-  x.fillText('USED / EXPECTED / DELIVERED / ON HAND in gallons · green = received today · DAYS = days of supply · orange<20d, red<10d · A.M. FILL = top up before open', 26, fy);
+  // ── FOOTER (minimal) ──
+  x.fillStyle='#B9BFC9'; x.font='500 11.5px Arial'; x.textBaseline='middle'; x.textAlign='left';
+  x.fillText('All quantities in gallons \u00B7 DAYS = days of supply remaining', 28, fy0+warnH+22);
+  x.textAlign='right';
+  x.fillText('NE43 Detergent Inventory', W-28, fy0+warnH+22);
+  x.textAlign='left';
   return cv;
 }
 function roundRect(x,px,py,w,h,r){ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath(); }
 
-async function shareEndOfDay(){
-  const dates=allDates(); if(!dates.length){ showToast('No data yet'); return; }
+// ── Shared prep: validate the date + build the PNG. Used by both the Slack
+// poster and the manual save-image fallback so their guards never drift apart.
+function prepEodReport(){
+  const dates=allDates(); if(!dates.length){ showToast('No data yet'); return null; }
   const date=dates[dates.length-1];
-  // Guard: warn when the latest data is not from today (unsynced/behind device)
   const rt=localDate();
   if(date!==rt){
-    if(!confirm('\u26A0 The most recent data on this device is for '+date+' \u2014 not today ('+rt+').\n\nIf today\u2019s numbers were entered on another device, tap SYNCED \u2192 Pull latest first.\n\nShare the '+date+' report anyway?')) return;
+    if(!confirm('\u26A0 The most recent data on this device is for '+date+' \u2014 not today ('+rt+').\n\nIf today\u2019s numbers were entered on another device, tap SYNCED \u2192 Pull latest first.\n\nUse the '+date+' report anyway?')) return null;
   }
-  // Guard: point out missing areas for the report date (still allowed)
   const missing=[];
   if(!DB.tank[date]) missing.push('pod tank readings');
   if(!DB.onhand[date]) missing.push('inventory counts');
   if(!DB.cars[date]) missing.push('cars washed');
   if(missing.length){
-    if(!confirm('Heads up: '+date+' has no '+missing.join(', ')+' recorded. Those will show as blanks/dashes.\n\nShare anyway?')) return;
+    if(!confirm('Heads up: '+date+' has no '+missing.join(', ')+' recorded. Those will show as blanks/dashes.\n\nContinue anyway?')) return null;
   }
-  // Build the file SYNCHRONOUSLY inside the tap. iOS Safari drops file attachments
-  // (sharing only the title text) if the share call happens after an async gap.
+  // Build SYNCHRONOUSLY inside the tap \u2014 required for iOS share-sheet reliability
+  // and harmless for the direct-post path too.
   const cv=buildEodCanvas(date);
-  const fileName='NE43-detergent-'+date+'.png';
   const dataUrl=cv.toDataURL('image/png');
   const b64=dataUrl.split(',')[1];
   const bin=atob(b64);
   const bytes=new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-  const file=new File([bytes],fileName,{type:'image/png'});
-  // Preferred path: native share sheet \u2014 but ONLY on touch devices (iPad/iPhone).
-  // Desktop share flyouts (Windows) often drop file attachments; there the download
-  // fallback is the reliable route (drag the PNG into Slack).
+  return { date, b64, bytes, fileName:'NE43-detergent-'+date+'.png' };
+}
+
+// ── Direct-to-Slack posting via a Power Automate flow (see SharePoint_Setup_Guide.md
+// for how to build the flow). The flow \u2014 not this app \u2014 holds the real Slack
+// credential, because this app's source is public on GitHub Pages. ──
+function slackFlowConfig(){
+  try{ return JSON.parse(localStorage.getItem('eodSlackFlow')||'null'); }catch(e){ return null; }
+}
+function configureSlackPost(){
+  const cur=slackFlowConfig()||{url:'',secret:''};
+  const url=prompt('Power Automate flow URL (from the flow\'s "When an HTTP request is received" trigger):', cur.url);
+  if(url===null) return;
+  const secret=prompt('Shared secret (optional \u2014 must match the flow\'s check, leave blank for none):', cur.secret||'');
+  if(secret===null) return;
+  localStorage.setItem('eodSlackFlow', JSON.stringify({url:url.trim(), secret:(secret||'').trim()}));
+  showToast(url.trim()?'Slack posting configured on this device':'Slack posting cleared');
+}
+async function postEndOfDayToSlack(){
+  const cfg=slackFlowConfig();
+  if(!cfg||!cfg.url){
+    if(confirm('Slack posting isn\'t set up on this device yet.\n\nSet it up now? (You\'ll need the flow URL from Power Automate \u2014 see SharePoint_Setup_Guide.md)')) configureSlackPost();
+    return;
+  }
+  const prep=prepEodReport(); if(!prep) return;
+  showToast('Sending to Slack\u2026');
+  try{
+    // no-cors: Power Automate HTTP triggers don't send CORS headers, so the
+    // browser can't read a response \u2014 we can fire the request but not
+    // confirm delivery. text/plain avoids a blocked CORS preflight; the flow
+    // parses the body as JSON regardless of the header.
+    await fetch(cfg.url, {
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({ date:prep.date, fileName:prep.fileName, imageBase64:prep.b64, secret:cfg.secret||'' })
+    });
+    showToast('Sent to Slack \u2014 check the channel to confirm');
+  }catch(e){
+    if(confirm('Could not reach the Slack flow (device may be offline, or the flow URL is wrong).\n\nSave the image instead so it isn\'t lost?')){
+      downloadEodBytes(prep);
+    }
+  }
+}
+function downloadEodBytes(prep){
+  const blob=new Blob([prep.bytes],{type:'image/png'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=prep.fileName; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+// Manual backup path \u2014 same share-sheet/download behavior as before, kept as
+// a safety net for when Slack posting isn't set up or seems to have failed.
+async function saveEodImageOnly(){
+  const prep=prepEodReport(); if(!prep) return;
+  const file=new File([prep.bytes],prep.fileName,{type:'image/png'});
   const isTouch=('ontouchend' in document)||navigator.maxTouchPoints>0;
   if(isTouch && navigator.canShare && navigator.canShare({files:[file]})){
-    try{
-      await navigator.share({files:[file]});
-      return;
-    }catch(e){ if(e.name==='AbortError') return; }
+    try{ await navigator.share({files:[file]}); return; }catch(e){ if(e.name==='AbortError') return; }
   }
-  // Fallback: download the image so it can be dragged into Slack
-  const blob=new Blob([bytes],{type:'image/png'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download=fileName; a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),4000);
+  downloadEodBytes(prep);
   showToast('Image saved \u2014 attach it in Slack');
+}
+
+// ── TEAM ROSTER ──
+// Fixed sentinel date for roster rows — these aren't date-scoped data, they're
+// control records, but the shared sync table needs a real-looking date so the
+// existing pull parser accepts them. Latest-SavedAt-wins gives us edit/toggle
+// history for free, same as every other area.
+const TEAM_SENTINEL_DATE='2020-01-01';
+const TEAM_SEED=['Casey Duffin','Christine Martinez','Cristian Sanchez','Demario Williams','Dominick Hayes','Edgar Linares','Emelie Canales','Gunnar Camp','Jesse Tapia','Jose Martinez','Josue Vasquez','Kelly Arellano','Laura Hartung','Lucy Garcia Medina','Sinahi Martinez','Roberto Villa'];
+function ensureTeamSeed(){
+  if(DB.team && Object.keys(DB.team).length) return;
+  DB.team={};
+  TEAM_SEED.forEach(n=>{ DB.team[n]=true; });
+  saveDB();
+}
+function activeTeamNames(){ return Object.keys(DB.team||{}).filter(n=>DB.team[n]).sort(); }
+function saveTeamMember(name, active){
+  DB.team=DB.team||{};
+  DB.team[name]=active;
+  saveDB();
+  const row=[TEAM_SENTINEL_DATE, name, 'Team', active?1:0, '', 0];
+  sendRows([row]);
+  renderTeamList();
+}
+function addTeamMember(){
+  const el=document.getElementById('team-add-name');
+  const name=(el.value||'').trim();
+  if(!name){ showToast('Enter a name first'); return; }
+  if(DB.team&&DB.team[name]!==undefined&&DB.team[name]){ showToast(name+' is already on the roster'); return; }
+  saveTeamMember(name, true);
+  el.value='';
+  showToast(name+' added to the roster');
+}
+function renderTeamList(){
+  const c=document.getElementById('team-list'); if(!c) return;
+  ensureTeamSeed();
+  const names=Object.keys(DB.team).sort();
+  c.innerHTML=names.map((n,idx)=>{
+    const active=DB.team[n];
+    const inactiveTag=active?'':' \u00b7 inactive';
+    const nameEsc=n.replace(/'/g,"\\'");
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:.65rem .85rem;'+(idx<names.length-1?'border-bottom:1px solid var(--line);':'')+'">'
+      +'<span style="font-size:14px;font-weight:600;color:'+(active?'var(--text)':'var(--text-hint)')+'">'+n+'<span style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-hint)">'+inactiveTag+'</span></span>'
+      +'<button onclick="saveTeamMember(\''+nameEsc+'\','+(!active)+')" style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;border:1px solid '+(active?'#1A6B3C':'var(--border)')+';background:'+(active?'#D5F5E3':'#F4F5F7')+';color:'+(active?'#1A6B3C':'var(--text-hint)')+';cursor:pointer">'+(active?'ACTIVE':'INACTIVE')+'</button>'
+      +'</div>';
+  }).join('');
+}
+
+// ── FILL VERIFICATION ──
+// Append-only event log: multiple fills of the same detergent can happen in
+// one day (a mid-day top-up plus a closing fill), so each save is a new
+// event, never a correction that overwrites a prior one.
+function fillDate(){ const el=document.getElementById('date-fill'); return el&&el.value?el.value:localDate(); }
+function renderFillTab(){
+  ensureTeamSeed();   // Fill depends on the roster even if Team tab was never opened
+  const sel=document.getElementById('fill-det');
+  if(sel && !sel.options.length){
+    sel.innerHTML=DETS.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
+    sel.onchange=refreshFillQtyRow;
+  }
+  const de=document.getElementById('date-fill');
+  if(de){ de.max=localDate(); if(!de.value) de.value=localDate(); }
+  refreshFillQtyRow();
+  const names=activeTeamNames();
+  const fsel=document.getElementById('fill-filler');
+  if(fsel) fsel.innerHTML='<option value="">Who did the fill\u2026</option>'+names.map(n=>`<option value="${n}">${n}</option>`).join('');
+  const vsel=document.getElementById('fill-verifier');
+  if(vsel) vsel.innerHTML='<option value="">Who checked it\u2026</option>'+names.map(n=>`<option value="${n}">${n}</option>`).join('');
+  renderFillLog();
+}
+// Same stepper + drum/EasyChem toggle + live gallon preview as the Inventory
+// tab (stepperHTML/ctoggleHTML/updateGalPreview, all reused as-is). Switching
+// detergents resets the quantity and starts the toggle on that detergent's
+// usual packaging — fully overridable per fill, exactly like Inventory.
+function refreshFillQtyRow(){
+  const i=+document.getElementById('fill-det').value||0;
+  entryState.fill[0]={qty:0, ctype:detCtype(i)};
+  const row=document.getElementById('fill-qty-row');
+  row.innerHTML=`
+    ${stepperHTML('qn-fill-0','0',1,0)}
+    <div class="oh-right">
+      ${ctoggleHTML('fill',0,entryState.fill[0].ctype)}
+      <span class="gal-tag" id="gp-fill-0">0.0 gal</span>
+    </div>`;
+}
+// Both names share the table's single repurposed ContainerType column, encoded
+// as a labeled pair so the raw workbook stays human-readable. Parsed back out
+// on pull with a fallback for older single-name fill records.
+function encodeFillNames(filler, verifier){ return 'Filled: '+filler+' | Verified: '+verifier; }
+function decodeFillNames(ct){
+  const m=/^Filled:\s*(.*?)\s*\|\s*Verified:\s*(.*)$/.exec(ct||'');
+  if(m) return {filler:m[1], verifier:m[2]};
+  return {filler:'', verifier:ct||''};   // older single-name fill rows
+}
+// A void never deletes or edits the original Fill row — it's its own new
+// append-only event that references the original by timestamp, matching the
+// "never silently rewrite history" approach used everywhere else in the app.
+function encodeVoidInfo(voidedBy, reason, refTs){ return 'Voided by: '+voidedBy+' | Reason: '+reason+' | Ref: '+refTs; }
+function decodeVoidInfo(ct){
+  const m=/^Voided by:\s*(.*?)\s*\|\s*Reason:\s*(.*?)\s*\|\s*Ref:\s*(.*)$/.exec(ct||'');
+  return m ? {voidedBy:m[1], reason:m[2], refTs:m[3]} : null;
+}
+// The container type isn't stored as its own column (ContainerType already
+// holds the two names) — gallons already reflect exactly what was chosen at
+// fill time, and the unit label for display is safely re-derived from the
+// gal:qty ratio (drum \u2248 30 gal/unit, EasyChem \u2248 2.5 gal/unit).
+function fillUnitLabel(qty, gal){
+  if(!qty) return 'container(s)';
+  const perUnit=gal/qty;
+  return Math.abs(perUnit-30)<Math.abs(perUnit-2.5) ? (qty===1?'drum':'drums') : (qty===1?'EasyChem container':'EasyChem containers');
+}
+function logFill(){
+  const i=+document.getElementById('fill-det').value||0;
+  const qty=entryState.fill[0].qty||0;
+  const ctype=entryState.fill[0].ctype;
+  const filler=document.getElementById('fill-filler').value;
+  const verifier=document.getElementById('fill-verifier').value;
+  if(qty<=0){ showToast('Enter an amount greater than 0'); return; }
+  if(!filler){ showToast('Select who did the fill'); return; }
+  if(!verifier){ showToast('Select who verified this fill'); return; }
+  if(filler===verifier && !confirm('Same person is listed as both filling and verifying — sign-off usually means a second set of eyes.\n\nLog it anyway?')) return;
+  const date=fillDate();
+  const gal=qty*galPerUnit(ctype);
+  const row=[date, DETS[i], 'Fill', qty, encodeFillNames(filler,verifier), gal];
+  sendRows([row]);
+  DB.fills=DB.fills||{};
+  (DB.fills[date]=DB.fills[date]||[]).push({i, qty, gal, filler, verifier, ts:new Date().toISOString()});
+  saveDB();
+  refreshFillQtyRow();
+  document.getElementById('fill-filler').value='';
+  document.getElementById('fill-verifier').value='';
+  showToast('Fill logged — '+DETS[i].split(' #')[0]+' filled by '+filler+', verified by '+verifier);
+  renderFillLog();
+}
+function renderFillLog(){
+  const c=document.getElementById('fill-log-list'); if(!c) return;
+  const date=fillDate();
+  const events=(DB.fills&&DB.fills[date])||[];
+  if(!events.length){ c.innerHTML='<div style="color:var(--text-hint);font-size:13px;padding:.5rem 0">No fills logged for this date yet.</div>'; return; }
+  c.innerHTML=events.map((e,idx)=>{
+    const c2=DET_COLORS[e.i];
+    const fillerTxt=e.filler?e.filler:'—';
+    if(e.voided){
+      return `<div style="background:#F4F5F7;border:1px solid var(--border);border-radius:9px;padding:.55rem .75rem;margin-bottom:6px;opacity:.75">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:10px;height:10px;border-radius:3px;background:${c2.bg};flex-shrink:0"></span>
+          <span style="flex:1;font-size:13px;font-weight:600;text-decoration:line-through;color:var(--text-hint)">${DETS[e.i]} +${fmt(e.qty,0)} ${fillUnitLabel(e.qty,e.gal)} (${fmt(e.gal,0)} gal)</span>
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:.04em;color:#B03A2E;background:#FCE8E6;padding:2px 8px;border-radius:999px;flex-shrink:0">VOIDED</span>
+        </div>
+        <div style="font-size:11px;font-weight:600;color:var(--text-hint);margin-top:4px;padding-left:18px">Voided by <b>${e.voided.voidedBy}</b> &middot; "${e.voided.reason}"</div>
+      </div>`;
+    }
+    return `<div style="background:var(--white);border:1px solid var(--border);border-radius:9px;padding:.55rem .75rem;margin-bottom:6px" data-fill-card="${idx}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="width:10px;height:10px;border-radius:3px;background:${c2.bg};flex-shrink:0"></span>
+        <span style="flex:1;font-size:13px;font-weight:600">${DETS[e.i]} <span style="color:var(--text-hint);font-weight:500">+${fmt(e.qty,0)} ${fillUnitLabel(e.qty,e.gal)} (${fmt(e.gal,0)} gal)</span></span>
+        <button class="fill-edit-btn" data-idx="${idx}" style="font-size:10.5px;font-weight:700;color:var(--text-sec);background:#F4F5F7;border:1px solid var(--border);border-radius:7px;padding:4px 9px;cursor:pointer;flex-shrink:0">Edit</button>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--text-sec);margin-top:4px;padding-left:18px">&#128666; Filled by <b style="color:var(--text)">${fillerTxt}</b> &middot; \u2713 Verified by <b style="color:#1A6B3C">${e.verifier}</b></div>
+    </div>`;
+  }).join('');
+  c.querySelectorAll('.fill-edit-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>openVoidPanel(+btn.dataset.idx));
+  });
+}
+// Tapping Edit opens an inline void-confirmation panel in place of that card.
+// Confirming records WHO voided it and WHY (both required), keeps the
+// original visible but struck through, then pre-fills the Log-a-Fill form
+// with its old values so fixing a mistake is a quick adjust-and-resubmit.
+function openVoidPanel(idx){
+  const card=document.querySelector('[data-fill-card="'+idx+'"]'); if(!card) return;
+  const names=activeTeamNames();
+  card.innerHTML=`
+    <div style="font-size:11px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Void this entry &amp; correct it</div>
+    <select id="void-by-sel" style="width:100%;font-size:13px;font-weight:600;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:#F8F9FA;margin-bottom:6px">
+      <option value="">Who is voiding this?</option>
+      ${names.map(n=>`<option value="${n}">${n}</option>`).join('')}
+    </select>
+    <input type="text" id="void-reason-input" placeholder="Reason (required)" style="width:100%;font-size:13px;padding:7px 9px;border:1px solid var(--border);border-radius:7px;margin-bottom:8px">
+    <div style="display:flex;gap:8px">
+      <button id="void-cancel-btn" style="flex:1;padding:.5rem;font-size:12px;font-weight:700;background:#fff;color:var(--text-sec);border:1px solid var(--border);border-radius:8px;cursor:pointer">Cancel</button>
+      <button id="void-confirm-btn" style="flex:1;padding:.5rem;font-size:12px;font-weight:700;background:var(--red);color:#fff;border:none;border-radius:8px;cursor:pointer">Void &amp; Load into Form</button>
+    </div>`;
+  document.getElementById('void-cancel-btn').addEventListener('click', renderFillLog);
+  document.getElementById('void-confirm-btn').addEventListener('click', ()=>{
+    const voidedBy=document.getElementById('void-by-sel').value;
+    const reason=document.getElementById('void-reason-input').value.trim();
+    voidFill(idx, voidedBy, reason);
+  });
+}
+function voidFill(idx, voidedBy, reason){
+  if(!voidedBy){ showToast('Select who is voiding this'); return; }
+  if(!reason){ showToast('A reason is required'); return; }
+  const date=fillDate();
+  const e=(DB.fills[date]||[])[idx]; if(!e) return;
+  const row=[date, DETS[e.i], 'FillVoid', 0, encodeVoidInfo(voidedBy, reason, e.ts), 0];
+  sendRows([row]);
+  e.voided={voidedBy, reason};
+  saveDB();
+  // Pre-fill Log-a-Fill with the voided entry's values for a quick correction
+  document.getElementById('fill-det').value=e.i;
+  refreshFillQtyRow();
+  const perUnit=e.qty?e.gal/e.qty:30;
+  const inferredCtype=Math.abs(perUnit-30)<Math.abs(perUnit-2.5)?'drum':'ez';
+  entryState.fill[0].qty=e.qty;
+  document.getElementById('qn-fill-0').value=e.qty;
+  setCtype('fill',0,inferredCtype);
+  document.getElementById('fill-filler').value=e.filler||'';
+  document.getElementById('fill-verifier').value=e.verifier||'';
+  showToast('Voided — form pre-filled below. Adjust and tap Log Fill to save the correction.');
+  renderFillLog();
 }
 
 // INIT
