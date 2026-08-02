@@ -1457,12 +1457,18 @@ function renderDash(){
     aw.innerHTML=`<div class="section-title" style="color:#922B21">&#9888; Needs Attention (${alerts.length})</div>`+
       alerts.map(a=>{
         const c=DET_COLORS[a.i];
-        const bg=a.sev==='red'?'#FADBD8':'#FDEBD0';
-        const bd=a.sev==='red'?'#F1948A':'#F5CBA7';
-        const tx=a.sev==='red'?'#922B21':'#935116';
+        // Brand-matched severity: critical uses Tommy's own header red family
+        // (not a generic alert-red); moderate reuses the app's own established
+        // amber (same tone as the EOD report), so both tiers feel like this
+        // app's palette rather than a default severity convention.
+        const bg=a.sev==='red'?'#F6E4E2':'#F5E6C8';
+        const bd=a.sev==='red'?'#D9A8A2':'#E0C083';
+        const tx=a.sev==='red'?'#8B1A1A':'#8E5B00';
+        const dot=a.sev==='red'?'&#9679;':'&#9675;';   // filled vs hollow — severity readable even without color
         return `<div style="background:${bg};border:1px solid ${bd};border-left:4px solid ${tx};border-radius:10px;padding:.65rem .85rem;margin-bottom:.45rem;display:flex;align-items:center;gap:9px">
-          <span style="width:11px;height:11px;border-radius:3px;background:${c.bg};flex-shrink:0"></span>
+          <span style="width:12px;height:12px;border-radius:4px;background:${c.bg};flex-shrink:0;box-shadow:0 0 0 2px #fff, 0 0 0 3px ${bd}"></span>
           <span style="font-size:12.5px;color:${tx}"><b>${a.name}:</b> ${a.msg}</span>
+          <span style="font-size:9px;color:${tx};opacity:.7;flex-shrink:0;margin-left:auto">${dot}</span>
         </div>`;
       }).join('');
   }
@@ -1754,9 +1760,19 @@ function buildEodCanvas(date){
     const rl=refillLevel(i,date);
     const fill=(tk!==undefined&&tk<rl)?refillSuggestion(i,date):null;
     const needsFill=(tk!==undefined&&tk<rl);
-    return {name,i,used,calc,del,oh,doh,needsFill,fill};
+    // Same variance check as the dashboard's Needs Attention list — today's
+    // actual vs the trailing 7-day average, flagged past a 30% drift.
+    let variance=null;
+    const expected7=trailingAvgDet(i,date);
+    if(used!==null&&expected7!==null&&expected7>=VARIANCE_MIN_GAL){
+      const drift=(used-expected7)/expected7;
+      if(drift>VARIANCE_PCT) variance={dir:'high',pct:Math.round(drift*100)};
+      else if(drift<-VARIANCE_PCT) variance={dir:'low',pct:Math.round(drift*100)};
+    }
+    return {name,i,used,calc,del,oh,doh,needsFill,fill,variance};
   });
   const negCount=rows.filter(r=>r.used!==null&&r.used<0).length;
+  const varCount=rows.filter(r=>r.variance).length;
   const cars=(DB.cars[date]||[]).reduce((a,b)=>a+(b||0),0);
   const galUsed=rows.reduce((s,r)=>s+(r.used!==null&&r.used>0?r.used:0),0);
   const delItems=rows.filter(r=>r.del>0).length;
@@ -1788,7 +1804,8 @@ function buildEodCanvas(date){
     {label:'CARS WASHED', val:cars>0?String(cars):'\u2014', col:INK},
     {label:'DELIVERED', val:delItems>0?delItems+' item'+(delItems>1?'s':'')+' \u00B7 '+fmt(delGal,0)+' gal':'\u2014', col:delItems>0?'#1A6B3C':SUB},
     {label:'A.M. FILLS', val:fillCount>0?String(fillCount):'None', col:fillCount>0?'#B03A2E':'#1A6B3C'},
-    {label:'REORDER', val:reorderCount>0?String(reorderCount):'None', col:reorderCount>0?'#B9770E':'#1A6B3C'}
+    {label:'REORDER', val:reorderCount>0?String(reorderCount):'None', col:reorderCount>0?'#B9770E':'#1A6B3C'},
+    {label:'USAGE ALERTS', val:varCount>0?String(varCount):'None', col:varCount>0?'#8B1A1A':'#1A6B3C'}
   ];
   const kw=W/kpis.length;
   kpis.forEach((k,ki)=>{
@@ -1830,6 +1847,14 @@ function buildEodCanvas(date){
     x.textAlign='right';
     x.font='700 18px Arial'; x.fillStyle=r.used!==null&&r.used<0?'#B03A2E':INK;
     x.fillText(r.used!==null?fmt(r.used,1):'\u2014', 270, ry+rowH/2);
+    // Usage-variance marker — same 30%-drift rule as the dashboard, same
+    // brand-matched colors (deep red = unusually low, gold = unusually high)
+    if(r.variance){
+      const vc=r.variance.dir==='low'?'#8B1A1A':'#8E5B00';
+      const arrow=r.variance.dir==='low'?'\u25BC':'\u25B2';
+      x.fillStyle=vc; x.font='700 12px Arial';
+      x.fillText(arrow+' '+Math.abs(r.variance.pct)+'%', 270, ry+rowH/2+17);
+    }
     x.fillStyle='#3A3F4A'; x.font='700 17px Arial';
     x.fillText(r.calc!==undefined&&r.calc>0?fmt(r.calc,1):'\u2014', 395, ry+rowH/2);
     if(r.del>0){ x.fillStyle='#1A6B3C'; x.font='800 18px Arial'; x.fillText('+'+fmt(r.del,0), 545, ry+rowH/2); }
@@ -1870,7 +1895,7 @@ function buildEodCanvas(date){
   }
   // ── FOOTER (minimal) ──
   x.fillStyle='#B9BFC9'; x.font='500 11.5px Arial'; x.textBaseline='middle'; x.textAlign='left';
-  x.fillText('All quantities in gallons \u00B7 DAYS = days of supply remaining', 28, fy0+warnH+22);
+  x.fillText('All quantities in gallons \u00B7 DAYS = days of supply \u00B7 \u25B2\u25BC = usage vs 7-day avg, off 30%+', 28, fy0+warnH+22);
   x.textAlign='right';
   x.fillText('NE43 Detergent Inventory', W-28, fy0+warnH+22);
   x.textAlign='left';
