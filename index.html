@@ -191,6 +191,7 @@ if (typeof msal === 'undefined') {
     <div class="drawer-item" data-tab="cars"><span class="di-icon">&#128663;</span>Cars Washed</div>
     <div class="drawer-item" data-tab="report"><span class="di-icon">&#128228;</span>End-of-Day Report</div>
     <div class="drawer-item" data-tab="order"><span class="di-icon">&#128230;</span>Order</div>
+    <div class="drawer-item" data-tab="discard"><span class="di-icon">&#128465;&#65039;</span>Waste / Discard</div>
     <div class="drawer-item" data-tab="team"><span class="di-icon">&#128101;</span>Team Roster</div>
     <div class="drawer-item" data-tab="log"><span class="di-icon">&#9776;</span>Log</div>
   </div>
@@ -313,6 +314,31 @@ if (typeof msal === 'undefined') {
   </div>
 </div>
 
+<!-- ═══ WASTE / DISCARD ═══ -->
+<div id="tab-discard" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow-y:auto;">
+  <div class="entry-topbar">Waste / Discard <span style="opacity:.65;font-weight:400;font-size:10px">Contamination, spills, expired product</span></div>
+  <div style="padding:1rem">
+    <div style="background:#EBF2FA;border:1px solid #BDD4EA;border-left:4px solid #2980B9;border-radius:10px;padding:.7rem .9rem;margin-bottom:.9rem;font-size:12px;color:#1F618D;line-height:1.5">
+      Use this when product is dumped or thrown out for a reason other than washing cars \u2014 a contaminated pod tank, a spill, expired stock. This keeps it out of your usage numbers so it doesn't look like a sudden spike in demand.
+    </div>
+    <div class="entry-date-bar" style="padding:0 0 .7rem"><label>Date</label><input type="date" id="date-discard" onchange="renderDiscardTab()"></div>
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:.85rem .9rem;margin-bottom:.9rem">
+      <select id="discard-det" style="width:100%;font-size:14px;font-weight:600;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:#F8F9FA;color:var(--text);margin-bottom:8px"></select>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <input type="number" id="discard-gal" value="0" min="0" step="0.5" style="width:100px;font-size:16px;font-weight:700;padding:9px 10px;border:1px solid var(--border);border-radius:8px;text-align:center">
+        <span style="font-size:13px;color:var(--text-sec);font-weight:600">gallons discarded</span>
+      </div>
+      <input type="text" id="discard-reason" placeholder="Reason (required) \u2014 e.g. contaminated tank, dumped and cleaned" style="width:100%;font-size:13px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
+      <select id="discard-loggedby" style="width:100%;font-size:14px;font-weight:600;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:#F8F9FA;color:var(--text);margin-bottom:10px">
+        <option value="">Logged by\u2026</option>
+      </select>
+      <button onclick="logDiscard()" style="width:100%;padding:.75rem;font-size:13px;font-weight:700;background:var(--red);color:#fff;border:none;border-radius:9px;cursor:pointer;letter-spacing:.03em;text-transform:uppercase">Log Waste / Discard</button>
+    </div>
+    <div class="section-title" style="margin-bottom:.5rem">Logged for this date</div>
+    <div id="discard-log-list"></div>
+  </div>
+</div>
+
 <!-- ═══ TEAM ROSTER ═══ -->
 <div id="tab-team" class="hidden" style="display:flex;flex-direction:column;flex:1;overflow-y:auto;">
   <div class="entry-topbar">Team Roster <span style="opacity:.65;font-weight:400;font-size:10px">used for Fill Verification sign-off</span></div>
@@ -381,7 +407,65 @@ function saveCtype(i, type){
   const row=[CTYPE_SENTINEL_DATE, DETS[i], 'CType', 0, type, 0];
   sendRows([row]);
   showToast(DETS[i].split(' #')[0]+' now packaged in '+(type==='drum'?'drums':'EasyChem boxes')+' going forward');
-  renderCtypeList();
+}
+
+// ── WASTE / DISCARD ──
+// Same encode/decode approach as Fill's names — pack two text fields into the
+// one repurposed ContainerType column, human-readable if you open the sheet.
+function encodeDiscardInfo(reason, loggedBy){ return 'Reason: '+reason+' | Logged by: '+loggedBy; }
+function decodeDiscardInfo(ct){
+  const m=/^Reason:\s*(.*?)\s*\|\s*Logged by:\s*(.*)$/.exec(ct||'');
+  return m ? {reason:m[1], loggedBy:m[2]} : null;
+}
+function discardDate(){ const el=document.getElementById('date-discard'); return el&&el.value?el.value:localDate(); }
+function renderDiscardTab(){
+  ensureTeamSeed();
+  const sel=document.getElementById('discard-det');
+  if(sel && !sel.options.length) sel.innerHTML=DETS.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
+  const de=document.getElementById('date-discard');
+  if(de){ de.max=localDate(); if(!de.value) de.value=localDate(); }
+  const names=activeTeamNames();
+  const lb=document.getElementById('discard-loggedby');
+  if(lb) lb.innerHTML='<option value="">Logged by\u2026</option>'+names.map(n=>`<option value="${n}">${n}</option>`).join('');
+  renderDiscardLog();
+}
+function logDiscard(){
+  const i=+document.getElementById('discard-det').value||0;
+  const gal=+document.getElementById('discard-gal').value||0;
+  const reason=document.getElementById('discard-reason').value.trim();
+  const loggedBy=document.getElementById('discard-loggedby').value;
+  if(gal<=0){ showToast('Enter how many gallons were discarded'); return; }
+  if(!reason){ showToast('A reason is required'); return; }
+  if(!loggedBy){ showToast('Select who is logging this'); return; }
+  const date=discardDate();
+  const row=[date, DETS[i], 'Discarded', 0, encodeDiscardInfo(reason, loggedBy), gal];
+  sendRows([row]);
+  DB.discarded=DB.discarded||{};
+  (DB.discarded[date]=DB.discarded[date]||{})[i]={gal, reason, loggedBy};
+  saveDB();
+  document.getElementById('discard-gal').value='0';
+  document.getElementById('discard-reason').value='';
+  document.getElementById('discard-loggedby').value='';
+  showToast('Logged \u2014 '+DETS[i].split(' #')[0]+' will not count toward usage for '+date);
+  renderDiscardLog();
+  renderDash();
+}
+function renderDiscardLog(){
+  const c=document.getElementById('discard-log-list'); if(!c) return;
+  const date=discardDate();
+  const entries=DB.discarded&&DB.discarded[date];
+  const items=entries?Object.keys(entries).map(i=>({i:+i,...entries[i]})):[];
+  if(!items.length){ c.innerHTML='<div style="color:var(--text-hint);font-size:13px;padding:.5rem 0">Nothing logged for this date.</div>'; return; }
+  c.innerHTML=items.map(e=>{
+    const c2=DET_COLORS[e.i];
+    return `<div style="background:var(--white);border:1px solid var(--border);border-radius:9px;padding:.55rem .75rem;margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="width:10px;height:10px;border-radius:3px;background:${c2.bg};flex-shrink:0"></span>
+        <span style="flex:1;font-size:13px;font-weight:600">${DETS[e.i]} <span style="color:var(--text-hint);font-weight:500">\u2212${fmt(e.gal,1)} gal</span></span>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--text-sec);margin-top:4px;padding-left:18px">"${e.reason}" \u2014 logged by <b style="color:var(--text)">${e.loggedBy}</b></div>
+    </div>`;
+  }).join('');
 }
 // Pod tank minimum levels (gallons) — from your Input Log conditional formatting
 const MIN_LEVEL = [10.0, 5.0, 10.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0];
@@ -565,7 +649,7 @@ async function cloudPullAll(silent){
     if(!best[key]||ts>String(best[key].ts)) best[key]={ed,det,area,qty:Number(qty)||0,ct:ct||'',gal:Number(gal)||0,ts};
   });
   // rebuild the derived stores fresh from the deduped cloud rows
-  const nb={tank:{},onhand:{},ohqty:{},ohctype:{},delivery:{},delqty:{},delctype:{},cars:{},calc:{},orders:{},team:{},ctype:{}};
+  const nb={tank:{},onhand:{},ohqty:{},ohctype:{},delivery:{},delqty:{},delctype:{},cars:{},calc:{},orders:{},team:{},ctype:{},discarded:{}};
   const ctKey=s=>s==='30 Gal Drum'?'drum':s==='EasyChem Container'?'ez':null;
   Object.values(best).forEach(x=>{
     const di=DETS.indexOf(x.det), pi=PACKAGES.indexOf(x.det);
@@ -585,6 +669,13 @@ async function cloudPullAll(silent){
     else if(x.area==='Ordered'&&di>=0){ (nb.orders[x.ed]=nb.orders[x.ed]||DETS.map(()=>0))[di]=x.qty; }
     else if(x.area==='Team'){ nb.team[x.det]=x.qty>0; }
     else if(x.area==='CType'){ const di2=DETS.indexOf(x.det); if(di2>=0) nb.ctype[di2]=x.ct; }
+    else if(x.area==='Discarded'){
+      const di3=DETS.indexOf(x.det);
+      if(di3>=0){
+        const info=decodeDiscardInfo(x.ct)||{reason:x.ct||'',loggedBy:''};
+        (nb.discarded[x.ed]=nb.discarded[x.ed]||{})[di3]={gal:x.gal, reason:info.reason, loggedBy:info.loggedBy};
+      }
+    }
   });
   const nbFills={};
   const voidsByRef={};
@@ -603,7 +694,7 @@ async function cloudPullAll(silent){
   });
   Object.keys(nbFills).forEach(d=>nbFills[d].sort((a,b)=>a.ts<b.ts?-1:1));
   nb.fills=nbFills;
-  ['tank','onhand','ohqty','ohctype','delivery','delqty','delctype','cars','calc','orders','team','fills','ctype'].forEach(k=>{ DB[k]=nb[k]; });
+  ['tank','onhand','ohqty','ohctype','delivery','delqty','delctype','cars','calc','orders','team','fills','ctype','discarded'].forEach(k=>{ DB[k]=nb[k]; });
   saveDB();
   rebuildDatePicker();
   renderDash();
@@ -682,6 +773,7 @@ function defaultDB(){
     fills:{},
     team:{},
     ctype:{},
+    discarded:{},
     delqty:{},
     ohctype:{},
     delctype:{},
@@ -753,17 +845,29 @@ function totalGalDet(i,date){
   return ((DB.tank[date]||{})[i]||0)+((DB.onhand[date]||{})[i]||0);
 }
 // Usage = prior day total gallons − (current total gallons − deliveries received)
+// Usage = prior day total gallons − (current total gallons − deliveries + discarded).
+// Discarded mirrors Delivered but in the opposite direction: a delivery adds
+// gallons that must NOT look like negative usage; a discard/waste event
+// removes gallons that must NOT look like positive usage (e.g. dumping a
+// contaminated pod tank). Without this, a cleanup event would register as a
+// usage spike and corrupt the 7-day average for about a week afterward.
 function dailyUsageDet(i,date){
   const dates=allDates(),idx=dates.indexOf(date);
   if(idx<=0)return null;
   const prev=dates[idx-1];
-  return totalGalDet(i,prev)-(totalGalDet(i,date)-((DB.delivery[date]||{})[i]||0));
+  const disc=(DB.discarded[date]||{})[i];
+  const discGal=(disc&&disc.gal)?disc.gal:0;
+  return totalGalDet(i,prev)-(totalGalDet(i,date)-((DB.delivery[date]||{})[i]||0)+discGal);
+}
+function discardTotal(date){
+  const d=DB.discarded[date]; if(!d) return 0;
+  return Object.values(d).reduce((s,x)=>s+(x&&x.gal?x.gal:0),0);
 }
 function dailyUsageTotal(date){
   const dates=allDates(),idx=dates.indexOf(date);
   if(idx<=0)return null;
   const prev=dates[idx-1];
-  return (tankTotal(prev)+ohTotal(prev))-((tankTotal(date)+ohTotal(date))-delivTotal(date));
+  return (tankTotal(prev)+ohTotal(prev))-((tankTotal(date)+ohTotal(date))-delivTotal(date)+discardTotal(date));
 }
 function trailingAvgDet(i,date,w=7){
   const dates=allDates(),idx=dates.indexOf(date),vals=[];
@@ -1593,7 +1697,7 @@ function renderLog(){
 // NAVIGATION
 // ═══════════════════════════════════════════════
 function switchTab(name){
-  const tabs=['dashboard','tank','onhand','delivery','fill','cars','order','team','report','log'];
+  const tabs=['dashboard','tank','onhand','delivery','fill','cars','order','discard','team','report','log'];
   tabs.forEach(t=>{
     // Only toggle the hidden class — never touch inline styles,
     // because the entry tabs rely on style="display:flex" for their layout
@@ -1605,6 +1709,7 @@ function switchTab(name){
   closeDrawer();
   if(name==='log') renderLog();
   if(name==='team') renderTeamList();
+  if(name==='discard') renderDiscardTab();
   if(name==='fill') renderFillTab();
   if(name==='order'){ if(!orderUnits) orderReset(); else renderOrder(); }
   if(name==='dashboard') renderDash();
