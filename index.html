@@ -1438,11 +1438,34 @@ function guardUsageAnomalies(tab, date, vals){
   });
   return issues.length?('Implied daily usage looks off:\n• '+issues.join('\n• ')):null;
 }
-function runGuards(tab, date, gals, vals){
+// Guard 5: inventory containers dropped from yesterday, but no matching Fill
+// Verification was logged for that detergent today — closes the gap between
+// "we counted fewer containers" and "we have a record of where they went."
+function guardMissingFillLog(date, qtys){
+  if(!qtys) return null;
+  const prev=prevDateBefore(date);
+  if(!prev) return null;
+  const issues=[];
+  DETS.forEach((name,i)=>{
+    const before=(DB.ohqty[prev]||{})[i];
+    if(before===undefined) return;
+    const after=qtys[i];
+    if(after>=before) return;   // only care about drops
+    const fillsToday=(DB.fills[date]||[]).filter(e=>e.i===i && !e.voided);
+    if(!fillsToday.length){
+      issues.push(name+': down '+(before-after)+' container(s) from yesterday, but no Fill Verification was logged today');
+    }
+  });
+  return issues.length?('Inventory dropped with no Fill logged:\n\u2022 '+issues.join('\n\u2022 ')):null;
+}
+function runGuards(tab, date, gals, vals, qtys){
   const warnings=[];
   const ow=guardOverwrite(tab,date); if(ow)warnings.push(ow);
   if(tab==='delivery'){ const d=guardDupDelivery(date,gals); if(d)warnings.push(d); }
-  if(tab==='onhand'){ const j=guardInventoryJumps(date,gals); if(j)warnings.push(j); }
+  if(tab==='onhand'){
+    const j=guardInventoryJumps(date,gals); if(j)warnings.push(j);
+    const f=guardMissingFillLog(date,qtys); if(f)warnings.push(f);
+  }
   const u=guardUsageAnomalies(tab,date,vals); if(u)warnings.push(u);
   if(!warnings.length) return true;
   return confirm('\u26A0 PLEASE REVIEW BEFORE SAVING\n\n'+warnings.join('\n\n')+'\n\nSave anyway?');
@@ -1503,7 +1526,7 @@ function saveEntry(tab){
     // read inputs first — nothing saves until guards pass
     const qtys=DETS.map((_,i)=>parseInt(document.getElementById('qn-'+tab+'-'+i).value)||0);
     const gals=DETS.map((_,i)=>qtys[i]*galPerUnit(entryState[tab][i].ctype));
-    if(!runGuards(tab,date,gals,gals)){ showToast('Save canceled'); return; }
+    if(!runGuards(tab,date,gals,gals,qtys)){ showToast('Save canceled'); return; }
     DB[dbKey][date]={}; DB[qtyKey][date]={}; DB[ctKey][date]={};
     const newLogs=[];
     DETS.forEach((name,i)=>{
