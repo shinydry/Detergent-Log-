@@ -1126,14 +1126,15 @@ function needsAttention(date){
       const add=rs?` — add ${rs.label} (→ ${fmt(rs.resulting,1)} gal${rs.days?', ≈'+fmt(rs.days,1)+' days':''})`:' — refill';
       alerts.push({type:'tank',i,name,msg:`Pod tank at ${fmt(tk,1)} gal (refill level ${fmt(rl,1)})${add}`,sev:'red'});
     }
-    // Simplified on purpose: compare the SAME two numbers already shown on the
-    // detergent's card (Daily Usage vs 7-day Avg), so the alert is never citing
-    // a number the person can't also see and check for themselves.
-    const act=dailyUsageDet(i,date), expected=trailingAvgDet(i,date);
+    // Compare against today's Expected (calculated from actual car counts),
+    // not the 7-day average — a slow-car-count day already produces a low
+    // Expected number, so a genuinely proportional slow day won't false-flag.
+    // Only real deviation from what the car count predicts gets flagged now.
+    const act=dailyUsageDet(i,date), expected=calcUsageDet(i,date);
     if(act!==null&&expected!==null&&expected>=VARIANCE_MIN_GAL){
       const drift=(act-expected)/expected;
-      if(drift>VARIANCE_PCT) alerts.push({type:'var',i,name,msg:`Using ${fmt(act,1)} gal/day vs ~${fmt(expected,1)} 7-day avg (+${Math.round(drift*100)}%) — usage is unusually high`,sev:'amber'});
-      else if(drift<-VARIANCE_PCT) alerts.push({type:'var',i,name,msg:`Using ${fmt(act,1)} gal/day vs ~${fmt(expected,1)} 7-day avg (${Math.round(drift*100)}%) — usage is unusually low`,sev:'red'});
+      if(drift>VARIANCE_PCT) alerts.push({type:'var',i,name,msg:`Using ${fmt(act,1)} gal/day vs ~${fmt(expected,1)} expected (+${Math.round(drift*100)}%) — usage is unusually high`,sev:'amber'});
+      else if(drift<-VARIANCE_PCT) alerts.push({type:'var',i,name,msg:`Using ${fmt(act,1)} gal/day vs ~${fmt(expected,1)} expected (${Math.round(drift*100)}%) — usage is unusually low`,sev:'red'});
     }
   });
   // Triage order: tank refills first (act now), usage anomalies next (investigate), reorders last (desk work)
@@ -1411,9 +1412,7 @@ function guardInventoryJumps(date, gals){
     const before=(DB.onhand[prev]||{})[i];
     if(before===undefined) return;
     const after=gals[i];
-    const delivered=((DB.delivery[date]||{})[i])||0;
     const gain=after-before;
-    if(gain>delivered+0.01) issues.push(name+': up '+fmt(gain,1)+' gal but only '+fmt(delivered,1)+' gal delivered that day');
     const med=trailingMedianDet(i,prev)||0;
     if(-gain>Math.max(60,med*4+30)) issues.push(name+': dropped '+fmt(-gain,1)+' gal in one day (typical usage ~'+fmt(med,1)+')');
   });
@@ -1458,6 +1457,27 @@ function guardMissingFillLog(date, qtys){
   });
   return issues.length?('Inventory dropped with no Fill logged:\n\u2022 '+issues.join('\n\u2022 ')):null;
 }
+// Guard 6: inventory containers increased from yesterday, but no Delivered
+// entry was logged for that detergent today — the mirror image of the
+// missing-Fill guard: an unexplained gain needs a record just as much as an
+// unexplained drop does.
+function guardMissingDeliveryLog(date, qtys){
+  if(!qtys) return null;
+  const prev=prevDateBefore(date);
+  if(!prev) return null;
+  const issues=[];
+  DETS.forEach((name,i)=>{
+    const before=(DB.ohqty[prev]||{})[i];
+    if(before===undefined) return;
+    const after=qtys[i];
+    if(after<=before) return;   // only care about increases
+    const deliveredQty=(DB.delqty[date]||{})[i]||0;
+    if(deliveredQty<=0){
+      issues.push(name+': up '+(after-before)+' container(s) from yesterday, but no Delivered entry was logged today');
+    }
+  });
+  return issues.length?('Inventory increased with no Delivery logged:\n\u2022 '+issues.join('\n\u2022 ')):null;
+}
 function runGuards(tab, date, gals, vals, qtys){
   const warnings=[];
   const ow=guardOverwrite(tab,date); if(ow)warnings.push(ow);
@@ -1465,6 +1485,7 @@ function runGuards(tab, date, gals, vals, qtys){
   if(tab==='onhand'){
     const j=guardInventoryJumps(date,gals); if(j)warnings.push(j);
     const f=guardMissingFillLog(date,qtys); if(f)warnings.push(f);
+    const dl=guardMissingDeliveryLog(date,qtys); if(dl)warnings.push(dl);
   }
   const u=guardUsageAnomalies(tab,date,vals); if(u)warnings.push(u);
   if(!warnings.length) return true;
@@ -1889,11 +1910,12 @@ function buildEodCanvas(date){
     const fill=(tk!==undefined&&tk<rl)?refillSuggestion(i,date):null;
     const needsFill=(tk!==undefined&&tk<rl);
     // Same variance check as the dashboard's Needs Attention list — today's
-    // actual vs the trailing 7-day average, flagged past a 30% drift.
+    // actual vs today's Expected (car-count based), not the 7-day average, so
+    // a genuinely slow-car-count day doesn't get flagged as unusual on its own.
     let variance=null;
-    const expected7=trailingAvgDet(i,date);
-    if(used!==null&&expected7!==null&&expected7>=VARIANCE_MIN_GAL){
-      const drift=(used-expected7)/expected7;
+    const expectedToday=calc;
+    if(used!==null&&expectedToday!==null&&expectedToday!==undefined&&expectedToday>=VARIANCE_MIN_GAL){
+      const drift=(used-expectedToday)/expectedToday;
       if(drift>VARIANCE_PCT) variance={dir:'high',pct:Math.round(drift*100)};
       else if(drift<-VARIANCE_PCT) variance={dir:'low',pct:Math.round(drift*100)};
     }
@@ -2023,7 +2045,7 @@ function buildEodCanvas(date){
   }
   // ── FOOTER (minimal) ──
   x.fillStyle='#B9BFC9'; x.font='500 11.5px Arial'; x.textBaseline='middle'; x.textAlign='left';
-  x.fillText('All quantities in gallons \u00B7 DAYS = days of supply \u00B7 \u25B2\u25BC = usage vs 7-day avg, off 30%+', 28, fy0+warnH+22);
+  x.fillText('All quantities in gallons \u00B7 DAYS = days of supply \u00B7 \u25B2\u25BC = usage vs expected, off 30%+', 28, fy0+warnH+22);
   x.textAlign='right';
   x.fillText('NE43 Detergent Inventory', W-28, fy0+warnH+22);
   x.textAlign='left';
@@ -2173,7 +2195,7 @@ function renderFillTab(){
   ensureTeamSeed();   // Fill depends on the roster even if Team tab was never opened
   const sel=document.getElementById('fill-det');
   if(sel && !sel.options.length){
-    sel.innerHTML=DETS.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
+    sel.innerHTML='<option value="">Choose a detergent\u2026</option>'+DETS.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
     sel.onchange=refreshFillQtyRow;
   }
   const de=document.getElementById('date-fill');
@@ -2191,9 +2213,15 @@ function renderFillTab(){
 // detergents resets the quantity and starts the toggle on that detergent's
 // usual packaging — fully overridable per fill, exactly like Inventory.
 function refreshFillQtyRow(){
-  const i=+document.getElementById('fill-det').value||0;
-  entryState.fill[0]={qty:0, ctype:detCtype(i)};
+  const detVal=document.getElementById('fill-det').value;
   const row=document.getElementById('fill-qty-row');
+  if(detVal===''){
+    entryState.fill[0]={qty:0, ctype:'drum'};
+    row.innerHTML='<div style="padding:.5rem 0;color:var(--text-hint);font-size:13px">Select a detergent above to continue.</div>';
+    return;
+  }
+  const i=+detVal;
+  entryState.fill[0]={qty:0, ctype:detCtype(i)};
   row.innerHTML=`
     ${stepperHTML('qn-fill-0','0',1,0)}
     <div class="oh-right">
@@ -2228,7 +2256,9 @@ function fillUnitLabel(qty, gal){
   return Math.abs(perUnit-30)<Math.abs(perUnit-2.5) ? (qty===1?'drum':'drums') : (qty===1?'EasyChem container':'EasyChem containers');
 }
 function logFill(){
-  const i=+document.getElementById('fill-det').value||0;
+  const detVal=document.getElementById('fill-det').value;
+  if(detVal===''){ showToast('Select a detergent'); return; }
+  const i=+detVal;
   const qty=entryState.fill[0].qty||0;
   const ctype=entryState.fill[0].ctype;
   const filler=document.getElementById('fill-filler').value;
@@ -2244,6 +2274,7 @@ function logFill(){
   DB.fills=DB.fills||{};
   (DB.fills[date]=DB.fills[date]||[]).push({i, qty, gal, filler, verifier, ts:new Date().toISOString()});
   saveDB();
+  document.getElementById('fill-det').value='';
   refreshFillQtyRow();
   document.getElementById('fill-filler').value='';
   document.getElementById('fill-verifier').value='';
