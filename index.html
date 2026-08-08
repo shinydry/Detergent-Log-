@@ -336,6 +336,24 @@ if (typeof msal === 'undefined') {
     </div>
     <div class="section-title" style="margin-bottom:.5rem">Logged for this date</div>
     <div id="discard-log-list"></div>
+
+    <div style="margin-top:1.5rem;padding-top:1.2rem;border-top:1px solid var(--line)">
+      <div class="section-title" style="margin-bottom:.5rem">Exclude a Day from Usage Averaging</div>
+      <div style="background:#EBF2FA;border:1px solid #BDD4EA;border-left:4px solid #2980B9;border-radius:10px;padding:.7rem .9rem;margin-bottom:.9rem;font-size:12px;color:#1F618D;line-height:1.5">
+        For a day that was clearly wrong but didn't go negative \u2014 a mild leak, a bad reading \u2014 so it doesn't drag down the 7-day average used for reorder timing. The recorded number itself stays exactly as entered; this only affects what future averages use.
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:10px;padding:.85rem .9rem;margin-bottom:.9rem">
+        <input type="date" id="date-exclude" onchange="renderExcludedDaysList()" style="width:100%;font-size:14px;font-weight:600;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:#F8F9FA;color:var(--text);margin-bottom:8px">
+        <select id="exclude-det" style="width:100%;font-size:14px;font-weight:600;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:#F8F9FA;color:var(--text);margin-bottom:8px"></select>
+        <input type="text" id="exclude-reason" placeholder="Reason (required) \u2014 e.g. mild leak, reading unreliable" style="width:100%;font-size:13px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
+        <select id="exclude-loggedby" style="width:100%;font-size:14px;font-weight:600;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:#F8F9FA;color:var(--text);margin-bottom:10px">
+          <option value="">Logged by\u2026</option>
+        </select>
+        <button onclick="logExcludeDay()" style="width:100%;padding:.75rem;font-size:13px;font-weight:700;background:var(--red);color:#fff;border:none;border-radius:9px;cursor:pointer;letter-spacing:.03em;text-transform:uppercase">Exclude This Day</button>
+      </div>
+      <div class="section-title" style="margin-bottom:.5rem">Currently Excluded Days</div>
+      <div id="excluded-days-list"></div>
+    </div>
   </div>
 </div>
 
@@ -428,6 +446,14 @@ function renderDiscardTab(){
   const lb=document.getElementById('discard-loggedby');
   if(lb) lb.innerHTML='<option value="">Logged by\u2026</option>'+names.map(n=>`<option value="${n}">${n}</option>`).join('');
   renderDiscardLog();
+
+  const xsel=document.getElementById('exclude-det');
+  if(xsel && !xsel.options.length) xsel.innerHTML=DETS.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
+  const xde=document.getElementById('date-exclude');
+  if(xde){ xde.max=localDate(); if(!xde.value) xde.value=localDate(); }
+  const xlb=document.getElementById('exclude-loggedby');
+  if(xlb) xlb.innerHTML='<option value="">Logged by\u2026</option>'+names.map(n=>`<option value="${n}">${n}</option>`).join('');
+  renderExcludedDaysList();
 }
 function logDiscard(){
   const i=+document.getElementById('discard-det').value||0;
@@ -467,8 +493,71 @@ function renderDiscardLog(){
     </div>`;
   }).join('');
 }
-// Pod tank minimum levels (gallons) — from your Input Log conditional formatting
+// ── EXCLUDE A DAY FROM USAGE AVERAGING ──
+// Reuses the same encode/decode as Waste/Discard (identical "Reason | Logged
+// by" shape) and the same simple overwrite sync model — correcting an
+// exclusion just means saving it again. Excluding requires a reason (it's
+// discarding real data from calculations); including a day again is a plain
+// one-tap toggle, same asymmetry as Team Roster's deactivate/reactivate.
+function logExcludeDay(){
+  const date=document.getElementById('date-exclude').value||localDate();
+  const i=+document.getElementById('exclude-det').value||0;
+  const reason=document.getElementById('exclude-reason').value.trim();
+  const loggedBy=document.getElementById('exclude-loggedby').value;
+  if(!reason){ showToast('A reason is required'); return; }
+  if(!loggedBy){ showToast('Select who is logging this'); return; }
+  const row=[date, DETS[i], 'ExcludedDay', 1, encodeDiscardInfo(reason, loggedBy), 0];
+  sendRows([row]);
+  DB.excludedDays=DB.excludedDays||{};
+  (DB.excludedDays[date]=DB.excludedDays[date]||{})[i]={excluded:true, reason, loggedBy};
+  saveDB();
+  document.getElementById('exclude-reason').value='';
+  document.getElementById('exclude-loggedby').value='';
+  showToast(DETS[i].split(' #')[0]+' on '+date+' excluded from usage averaging');
+  renderExcludedDaysList();
+  renderDash();
+}
+function includeDayAgain(date, i){
+  const entry=(DB.excludedDays[date]||{})[i]||{reason:'',loggedBy:''};
+  const row=[date, DETS[i], 'ExcludedDay', 0, encodeDiscardInfo(entry.reason,entry.loggedBy), 0];
+  sendRows([row]);
+  DB.excludedDays[date][i]={excluded:false, reason:entry.reason, loggedBy:entry.loggedBy};
+  saveDB();
+  showToast(DETS[i].split(' #')[0]+' on '+date+' included in usage averaging again');
+  renderExcludedDaysList();
+  renderDash();
+}
+function renderExcludedDaysList(){
+  const c=document.getElementById('excluded-days-list'); if(!c) return;
+  const items=[];
+  Object.keys(DB.excludedDays||{}).sort().reverse().forEach(date=>{
+    const dayObj=DB.excludedDays[date];
+    Object.keys(dayObj).forEach(iStr=>{
+      const e=dayObj[iStr];
+      if(e&&e.excluded) items.push({date, i:+iStr, reason:e.reason, loggedBy:e.loggedBy});
+    });
+  });
+  if(!items.length){ c.innerHTML='<div style="color:var(--text-hint);font-size:13px;padding:.5rem 0">No days currently excluded.</div>'; return; }
+  c.innerHTML=items.map(e=>{
+    const c2=DET_COLORS[e.i];
+    return `<div style="background:var(--white);border:1px solid var(--border);border-radius:9px;padding:.55rem .75rem;margin-bottom:6px" data-excl-date="${e.date}" data-excl-i="${e.i}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="width:10px;height:10px;border-radius:3px;background:${c2.bg};flex-shrink:0"></span>
+        <span style="flex:1;font-size:13px;font-weight:600">${DETS[e.i]} <span style="color:var(--text-hint);font-weight:500">${e.date}</span></span>
+        <button class="exclude-toggle-btn" style="font-size:10.5px;font-weight:700;color:var(--text-sec);background:#F4F5F7;border:1px solid var(--border);border-radius:7px;padding:4px 9px;cursor:pointer;flex-shrink:0">Include Again</button>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--text-sec);margin-top:4px;padding-left:18px">"${e.reason}" \u2014 logged by <b style="color:var(--text)">${e.loggedBy}</b></div>
+    </div>`;
+  }).join('');
+  c.querySelectorAll('.exclude-toggle-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const card=btn.closest('[data-excl-date]');
+      includeDayAgain(card.dataset.exclDate, +card.dataset.exclI);
+    });
+  });
+}
 const MIN_LEVEL = [10.0, 5.0, 10.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0];
+// (Pod tank minimum levels, from the original Input Log conditional formatting)
 
 // Wash packages (Club + retail combined) and mL-per-car rates per detergent,
 // derived from the Cars Washed sheet volumetrics (verified against Jul 10 2026 exactly).
@@ -649,7 +738,7 @@ async function cloudPullAll(silent){
     if(!best[key]||ts>String(best[key].ts)) best[key]={ed,det,area,qty:Number(qty)||0,ct:ct||'',gal:Number(gal)||0,ts};
   });
   // rebuild the derived stores fresh from the deduped cloud rows
-  const nb={tank:{},onhand:{},ohqty:{},ohctype:{},delivery:{},delqty:{},delctype:{},cars:{},calc:{},orders:{},team:{},ctype:{},discarded:{}};
+  const nb={tank:{},onhand:{},ohqty:{},ohctype:{},delivery:{},delqty:{},delctype:{},cars:{},calc:{},orders:{},team:{},ctype:{},discarded:{},excludedDays:{}};
   const ctKey=s=>s==='30 Gal Drum'?'drum':s==='EasyChem Container'?'ez':null;
   Object.values(best).forEach(x=>{
     const di=DETS.indexOf(x.det), pi=PACKAGES.indexOf(x.det);
@@ -676,6 +765,13 @@ async function cloudPullAll(silent){
         (nb.discarded[x.ed]=nb.discarded[x.ed]||{})[di3]={gal:x.gal, reason:info.reason, loggedBy:info.loggedBy};
       }
     }
+    else if(x.area==='ExcludedDay'){
+      const di4=DETS.indexOf(x.det);
+      if(di4>=0){
+        const info=decodeDiscardInfo(x.ct)||{reason:x.ct||'',loggedBy:''};
+        (nb.excludedDays[x.ed]=nb.excludedDays[x.ed]||{})[di4]={excluded:x.qty>0, reason:info.reason, loggedBy:info.loggedBy};
+      }
+    }
   });
   const nbFills={};
   const voidsByRef={};
@@ -694,7 +790,7 @@ async function cloudPullAll(silent){
   });
   Object.keys(nbFills).forEach(d=>nbFills[d].sort((a,b)=>a.ts<b.ts?-1:1));
   nb.fills=nbFills;
-  ['tank','onhand','ohqty','ohctype','delivery','delqty','delctype','cars','calc','orders','team','fills','ctype','discarded'].forEach(k=>{ DB[k]=nb[k]; });
+  ['tank','onhand','ohqty','ohctype','delivery','delqty','delctype','cars','calc','orders','team','fills','ctype','discarded','excludedDays'].forEach(k=>{ DB[k]=nb[k]; });
   saveDB();
   rebuildDatePicker();
   renderDash();
@@ -774,6 +870,7 @@ function defaultDB(){
     team:{},
     ctype:{},
     discarded:{},
+    excludedDays:{},
     delqty:{},
     ohctype:{},
     delctype:{},
@@ -869,9 +966,35 @@ function dailyUsageTotal(date){
   const prev=dates[idx-1];
   return (tankTotal(prev)+ohTotal(prev))-((tankTotal(date)+ohTotal(date))-delivTotal(date)+discardTotal(date));
 }
+// Excluded days (e.g. a leak that contaminated a pod tank for a couple of
+// days before it was caught) are skipped entirely here — the walk-back keeps
+// going past them to still find 7 genuine days, rather than just shrinking
+// the average's sample size. This protects reorder timing (dohDet,
+// refillSuggestion, orderNeeds all read this) from a temporary bad-data
+// window without ever touching the actual historical tank readings.
+// Excluded days (manually flagged, e.g. mild contamination that stayed
+// positive but was still clearly wrong) are skipped entirely — walk-back
+// keeps going past them for a real 7-day sample.
+//
+// Negative-usage days are handled automatically, with no flagging needed:
+// negative usage isn't physically possible for a real detergent, so any
+// day that shows it is unambiguously bad data (a leak, a miscount, an
+// unlogged correction). Rather than skip it, that day's calculated/expected
+// usage substitutes in its place — a same-day, no-judgment-call estimate,
+// so the average doesn't lose a whole day of sample size to it. The raw
+// recorded usage stays untouched and fully visible everywhere else (the
+// dashboard card, the EOD report) — only the rolling average used for
+// reorder timing is protected.
 function trailingAvgDet(i,date,w=7){
   const dates=allDates(),idx=dates.indexOf(date),vals=[];
-  for(let k=idx;k>0&&vals.length<w;k--){const u=dailyUsageDet(i,dates[k]);if(u!==null)vals.push(u);}
+  for(let k=idx;k>0&&vals.length<w;k--){
+    const dt=dates[k];
+    const ex=DB.excludedDays&&DB.excludedDays[dt]&&DB.excludedDays[dt][i];
+    if(ex&&ex.excluded) continue;
+    let u=dailyUsageDet(i,dt);
+    if(u!==null&&u<0){ const c=calcUsageDet(i,dt); u=(c!==null)?c:null; }
+    if(u!==null)vals.push(u);
+  }
   return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
 }
 function trailingAvgTotal(date,w=7){
