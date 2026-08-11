@@ -2019,7 +2019,7 @@ function renderOrder(){
 function buildEodCanvas(date){
   const cv=document.getElementById('eod-canvas');
   const scale=2;
-  const W=960, rowH=52, headH=130, kpiH=64, pkgH=36;
+  const W=740, rowH=52, headH=130, kpiH=64, pkgH=36;
   const RED='#8B1A1A', INK='#16181D', SUB='#6A7180', LINE='#E7E9ED', FAINT='#D8DBE0';
   // Pre-compute row data + counts
   const rows=DETS.map((name,i)=>{
@@ -2062,8 +2062,8 @@ function buildEodCanvas(date){
   // rectangle. Text content and wording are unchanged; only the container
   // shape changed to match the rounded-card reference.
   const hdrMargin=14;
-  const g=x.createLinearGradient(0,hdrMargin,0,headH-hdrMargin); g.addColorStop(0,'#8F1C1C'); g.addColorStop(1,'#7A1515');
-  x.fillStyle=g; roundRect(x,hdrMargin,hdrMargin,W-hdrMargin*2,headH-hdrMargin*2,16); x.fill();
+  const g=x.createLinearGradient(0,hdrMargin,0,headH); g.addColorStop(0,'#8F1C1C'); g.addColorStop(1,'#7A1515');
+  x.fillStyle=g; roundRectTop(x,0,hdrMargin,W,headH-hdrMargin,16); x.fill();
   x.fillStyle='rgba(255,255,255,.6)'; x.font='700 12px Arial'; x.textBaseline='alphabetic';
   x.fillText("TOMMY'S EXPRESS \u00B7 NE43", 28, 34);
   x.fillStyle='#FFFFFF'; x.font='800 30px Arial';
@@ -2101,8 +2101,8 @@ function buildEodCanvas(date){
   ];
   const kw=W/kpis.length;
   kpis.forEach((k,ki)=>{
-    const cx=ki*kw+24;
-    x.textAlign='left';
+    const cx=ki*kw+kw/2;
+    x.textAlign='center';
     x.fillStyle=SUB; x.font='700 10.5px Arial';
     x.fillText(k.label, cx, ky+26);
     // Auto-fit: step the font size down until the value fits its column,
@@ -2123,14 +2123,18 @@ function buildEodCanvas(date){
   const pkgCounts=PACKAGES.map((_,pi)=>(DB.cars[date]||[])[pi]||0);
   const pw=W/PACKAGES.length;
   x.textBaseline='middle';
+  x.textAlign='left';
   PACKAGES.forEach((pname,pi)=>{
-    const cx=pi*pw+24;
-    x.textAlign='left';
+    const label=pname.toUpperCase();
+    x.font='700 10px Arial'; const labelW=x.measureText(label).width;
+    x.font='800 14px Arial'; const countW=x.measureText(String(pkgCounts[pi])).width;
+    const gapPx=8;
+    const totalW=labelW+gapPx+countW;
+    const startX=pi*pw+pw/2-totalW/2;
     x.fillStyle=SUB; x.font='700 10px Arial';
-    x.fillText(pname.toUpperCase(), cx, ky+kpiH+pkgH/2);
-    const labelW=x.measureText(pname.toUpperCase()).width;
+    x.fillText(label, startX, ky+kpiH+pkgH/2);
     x.fillStyle=pkgCounts[pi]>0?INK:FAINT; x.font='800 14px Arial';
-    x.fillText(String(pkgCounts[pi]), cx+labelW+8, ky+kpiH+pkgH/2);
+    x.fillText(String(pkgCounts[pi]), startX+labelW+gapPx, ky+kpiH+pkgH/2);
     if(pi>0){ x.strokeStyle='#E8DFD8'; x.beginPath(); x.moveTo(pi*pw,ky+kpiH+8); x.lineTo(pi*pw,ky+kpiH+pkgH-8); x.stroke(); }
   });
   x.textBaseline='alphabetic';
@@ -2200,7 +2204,7 @@ function buildEodCanvas(date){
     if(r.del>0){ x.fillStyle='#1A6B3C'; x.font='800 18px Arial'; x.fillText('+'+fmt(r.del,0), 687, ry+rowH/2); }
     else { x.fillStyle=FAINT; x.font='600 17px Arial'; x.fillText('\u2014', 687, ry+rowH/2); }
     x.textAlign='left'; x.textBaseline='alphabetic';
-    x.strokeStyle=idx===DETS.length-1?'transparent':LINE;
+    x.strokeStyle=LINE;
     x.beginPath(); x.moveTo(28,ry+rowH); x.lineTo(W-28,ry+rowH); x.stroke();
   });
 
@@ -2220,6 +2224,18 @@ function buildEodCanvas(date){
   return cv;
 }
 function roundRect(x,px,py,w,h,r){ x.beginPath(); x.moveTo(px+r,py); x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r); x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath(); }
+// Same idea as roundRect, but only the top two corners curve — the bottom
+// edge stays flat/square, like a lid sitting on the content beneath it.
+function roundRectTop(x,px,py,w,h,r){
+  x.beginPath();
+  x.moveTo(px, py+h);
+  x.lineTo(px, py+r);
+  x.arcTo(px, py, px+r, py, r);
+  x.lineTo(px+w-r, py);
+  x.arcTo(px+w, py, px+w, py+r, r);
+  x.lineTo(px+w, py+h);
+  x.closePath();
+}
 
 // ── Shared prep: validate the date + build the PNG. Used by both the Slack
 // poster and the manual save-image fallback so their guards never drift apart.
