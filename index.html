@@ -1391,7 +1391,7 @@ function ctoggleHTML(tab,i,ct){
   const unsel=base+'background:#F2F3F5;color:#5A6270;border:2px solid #E0E0E0;';
   return `<div style="display:flex;gap:5px;" id="ctog-${tab}-${i}">
     <button type="button" style="${ct==='drum'?sel:unsel}" id="ctbtn-${tab}-${i}-drum" onclick="setCtype('${tab}',${i},'drum')">30 Gal<br>Drum</button>
-    <button type="button" style="${ct==='ez'?sel:unsel}" id="ctbtn-${tab}-${i}-ez" onclick="setCtype('${tab}',${i},'ez')">EasyChem<br>Container</button>
+    <button type="button" style="${ct==='ez'?sel:unsel}" id="ctbtn-${tab}-${i}-ez" onclick="setCtype('${tab}',${i},'ez')">2.5 Gal<br>EasyChem</button>
   </div>`;
 }
 function setCtype(tab,i,ct){
